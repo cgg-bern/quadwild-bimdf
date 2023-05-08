@@ -3,7 +3,7 @@
 #App config
 TARGET = viz_mesh_result
 TEMPLATE = app
-CONFIG += c++11
+CONFIG += c++20
 CONFIG -= app_bundle
 
 #Debug/release optimization flags
@@ -33,11 +33,13 @@ macx {
 ############################ LIBRARIES ############################
 
 #Setting library paths and configuration
+include(../../libs/libs.pri)
+include($$QUADRETOPOLOGY_PATH/quadretopology.pri)
 include(configuration.pri)
 
 #Libigl
-#INCLUDEPATH += $$LIBIGL_PATH/include/
-#QMAKE_CXXFLAGS += -isystem $$LIBIGL_PATH/include/
+INCLUDEPATH += $$LIBIGL_PATH/include/
+QMAKE_CXXFLAGS += -isystem $$LIBIGL_PATH/include/
 
 #Vcglib
 INCLUDEPATH += $$VCGLIB_PATH
@@ -45,6 +47,9 @@ INCLUDEPATH += $$VCGLIB_PATH
 #Eigen
 INCLUDEPATH += $$EIGEN_PATH
 
+INCLUDEPATH += $$GUROBI_PATH/include
+LIBS += -L$$GUROBI_PATH/lib -l$$GUROBI_COMPILER -l$$GUROBI_LIB
+DEFINES += GUROBI_DEFINED
 
 
 ############################ PROJECT FILES ############################

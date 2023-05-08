@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define QUADRETOPOLOGY_H
 
 #include <vector>
+#include <optional>
 
 #include <Eigen/Core>
 
@@ -34,9 +35,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "includes/qr_charts.h"
 #include "includes/qr_ilp.h"
+#include "qr_flow.h"
 #include "includes/qr_parameters.h"
 
 namespace QuadRetopology {
+
+struct FindSubdivisionsResult {
+    std::vector<Satsuma::BiMDFFullResult> bimdf_results; // empty if ILP was used
+    std::vector<FlowStats> flow_stats; // Empty if ILP was used
+    std::vector<ILPStats> ilp_stats; // Empty if flow was used
+    Timekeeper::HierarchicalStopWatchResult stopwatch;
+};
 
 template<class TriangleMesh>
 ChartData computeChartData(
@@ -55,14 +64,14 @@ std::vector<double> computeChartEdgeLength(
         const std::vector<int>& ilpResults,
         const double& weight);
 
-void findSubdivisions(
+FindSubdivisionsResult findSubdivisions(
         const ChartData& chartData,
         const std::vector<double>& chartEdgeLength,
         const Parameters& parameters,
         double& gap,
         std::vector<int>& ilpResults);
 
-void findSubdivisions(
+ILPResult findSubdivisions(
         const ChartData& chartData,
         const std::vector<double>& chartEdgeLength,
         const ILPMethod& method,
@@ -115,6 +124,6 @@ void quadrangulate(
 
 }
 
-#include "quadretopology.cpp"
+#include "quadretopology_impl.h"
 
 #endif // QUADRETOPOLOGY_H

@@ -23,11 +23,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ****************************************************************************/
 
+#include <gurobi_c.h>
+#define FIX_ALIGNMENT_BUG 1
+
 #include "qr_ilp.h"
 
 #include <gurobi_c++.h>
+#include <cassert>
 
-#define MIN_SUBDIVISION_VALUE 1
 #define FEASIBILITY_FIX_COST 1000000.0
 
 namespace QuadRetopology {
@@ -65,7 +68,7 @@ GRBQuadExpr getGurobiCostTermContinuous(GRBModel& model, const ILPMethod& method
 GRBLinExpr getGurobiAbsInteger(GRBModel& model, const GRBLinExpr& value);
 GRBLinExpr getGurobiAbsContinuous(GRBModel& model, const GRBLinExpr& value);
 
-inline void solveILP(
+ILPResult solveILP(
         const ChartData& chartData,
         const std::vector<double>& chartEdgeLength,
         const ILPMethod& method,
@@ -91,6 +94,10 @@ inline void solveILP(
         std::vector<int>& ilpResults)
 {
     using namespace std;
+    ILPResult ilp_result;
+
+    const double isoWeight = alpha;
+    const double regWeight = (1 - alpha);
 
     vector<int> result;
 
@@ -131,6 +138,10 @@ inline void solveILP(
             model.set(GRB_DoubleParam_MIPGap, gapLimit);
 
             // Create variables
+            GRBQuadExpr debug_pure_isometry_term = 0;
+            GRBQuadExpr debug_pure_regularity_term = 0;
+            GRBQuadExpr debug_pure_alignment_term = 0;
+            GRBQuadExpr debug_pure_alignment_term_full = 0;
             GRBQuadExpr obj = 0;
             GRBQuadExpr supportObj = 0;
 
@@ -208,6 +219,10 @@ inline void solveILP(
                                 numIsometryTerms++;
                             }
                         }
+                    }
+                    if (numIsometryTerms > 0) {
+                        obj += isoWeight * isoExpr / numIsometryTerms;
+                        debug_pure_isometry_term += isoWeight * isoExpr / numIsometryTerms;
                     }
 
 
@@ -289,6 +304,10 @@ inline void solveILP(
 
                     }
 
+                    if (numRegularityTerms > 0) {
+                        // do this here before the alignment term is added
+                        debug_pure_regularity_term += regWeight * regExpr / numRegularityTerms;
+                    }
 
 
                     /* ------------------------ ALIGN SINGULARITIES ------------------------ */
@@ -302,6 +321,7 @@ inline void solveILP(
                             int currentChartSideId = j;
                             size_t currentChartNSides = chartData.charts[currentChartId].chartSides.size();
 
+                            // trace dual sides through quads to find partner:
                             bool valueComputed = false;
                             do {
                                 const Chart& currentChart = chartData.charts[currentChartId];
@@ -319,12 +339,14 @@ inline void solveILP(
                                     }
                                     const ChartSide& adjOppositeSide = currentChart.chartSides[adjOppositeSideId];
 
+#if FIX_ALIGNMENT_BUG
                                     if (adjOppositeSide.subsides.size() != 1) {
                                         currentChartId = -1;
                                         currentChartSideId = -1;
                                         currentChartNSides = 0;
                                         break;
                                     }
+#endif // FIX_ALIGNMENT_BUG
 
                                     const std::array<int, 2>& incidentCharts = chartData.subsides[adjOppositeSide.subsides[0]].incidentCharts;
                                     const std::array<int, 2>& incidentChartSides = chartData.subsides[adjOppositeSide.subsides[0]].incidentChartSideId;
@@ -346,10 +368,13 @@ inline void solveILP(
                             } while (currentChartId != static_cast<int>(cId) && currentChartId > -1 && currentChartNSides == 4);
 
 
-                            if (currentChartId != static_cast<int>(cId)
+                            if (currentChartId != static_cast<int>(cId) // only for non-self-meets? or is that code elsewhere?
                                     && currentChartId > -1
                                     && (currentChartNSides == 3 || currentChartNSides == 5 || currentChartNSides == 6)
-                                    && chartData.charts[currentChartId].chartSides[currentChartSideId].subsides.size() == 1)
+#if FIX_ALIGNMENT_BUG
+                                    && chartData.charts[currentChartId].chartSides[currentChartSideId].subsides.size() == 1
+#endif // FIX_ALIGNMENT_BUG
+                                    )
                             {
                                 bool currentComputable = true;
                                 for (size_t i = 0; i < chartData.charts[currentChartId].chartSubsides.size(); i++) {
@@ -358,11 +383,16 @@ inline void solveILP(
                                         currentComputable = false;
                                 }
 
-                                if (currentComputable) {
+                                if (currentComputable) { // all subsides are computable
+                                    // 1: starting chart
                                     GRBLinExpr valueDown1 = 0.0;
                                     GRBLinExpr valueUp1 = 0.0;
+
+                                    // 2: partner chart
                                     GRBLinExpr valueDown2 = 0.0;
                                     GRBLinExpr valueUp2 = 0.0;
+
+                                    // singularity position in starting chart:
 
                                     //Singularity alignment for triangular case
                                     if (nSides == 3) {
@@ -406,6 +436,7 @@ inline void solveILP(
 
 
 
+                                    // singularity position in partner chart:
                                     std::vector<GRBLinExpr> adjChartSubsideSum;
                                     getChartSubsideSum(chartData, currentChartId, vars, isFixed, ilpResults, hardParityConstraint, adjChartSubsideSum);
 
@@ -455,25 +486,25 @@ inline void solveILP(
                             }
 
                             if (valueComputed) {
+                                auto expr = (0.5 * getGurobiCostTermInteger(model, ILPMethod::ABS, value1) +
+                                             0.5 * getGurobiCostTermInteger(model, ILPMethod::ABS, value2)
+                                             ) / nSides * alignSingularitiesWeight;
+
                                 if (constraintRespected.empty() || constraintRespected[constraintRespectedId]) {
-                                    regExpr += (
-                                        0.5 * getGurobiCostTermInteger(model, ILPMethod::ABS, value1) +
-                                        0.5 * getGurobiCostTermInteger(model, ILPMethod::ABS, value2)
-                                        )  / nSides * alignSingularitiesWeight;
+                                    regExpr += expr;
+                                    debug_pure_alignment_term += regWeight * expr / numRegularityTerms;
                                 }
+                                debug_pure_alignment_term_full += regWeight * expr / numRegularityTerms;
 
                                 constraintRespectedId++;
                             }
                         }
                     }
 
-                    const double isoWeight = alpha;
-                    const double regWeight = (1 - alpha);
 
-                    if (numIsometryTerms > 0)
-                        obj += isoWeight * isoExpr / numIsometryTerms;
-                    if (numRegularityTerms > 0)
+                    if (numRegularityTerms > 0) {
                         obj += regWeight * regExpr / numRegularityTerms;
+                    }
 
 
                     //Even side size sum constraint in a chart
@@ -652,12 +683,13 @@ inline void solveILP(
                                         }
 
                                         const ChartSide& adjOppositeSide = currentChart.chartSides[adjOppositeSideId];
+#if FIX_ALIGNMENT_BUG
                                         if (adjOppositeSide.subsides.size() != 1) {
                                             currentChartId = -1;
-                                            currentChartSideId = -1;
-                                            currentChartNSides = 0;
                                             break;
                                         }
+#endif // FIX_ALIGNMENT_BUG
+
 
                                         const std::array<int, 2>& incidentCharts = chartData.subsides[adjOppositeSide.subsides[0]].incidentCharts;
                                         const std::array<int, 2>& incidentChartSides = chartData.subsides[adjOppositeSide.subsides[0]].incidentChartSideId;
@@ -681,7 +713,10 @@ inline void solveILP(
                                 if (currentChartId != static_cast<int>(cId)
                                         && currentChartId > -1
                                         && (currentChartNSides == 3 || currentChartNSides == 5 || currentChartNSides == 6)
-                                        && chartData.charts[currentChartId].chartSides[currentChartSideId].subsides.size() == 1)
+#if FIX_ALIGNMENT_BUG
+                                        && chartData.charts[currentChartId].chartSides[currentChartSideId].subsides.size() == 1
+#endif // FIX_ALIGNMENT_BUG
+                                    )
                                 {
                                     bool currentComputable = true;
                                     for (size_t i = 0; i < chartData.charts[currentChartId].chartSubsides.size(); i++) {
@@ -787,6 +822,7 @@ inline void solveILP(
                                         respected = value1 == 0 && value2 == 0;
 
                                         valueComputed = true;
+
                                     }
                                 }
 
@@ -811,9 +847,21 @@ inline void solveILP(
                 std::cout << "Lost contraints alignment: " << numLostConstraintsAlign << std::endl << std::endl << std::endl;
             }
 
+            ilp_result.stats.push_back({
+                                           .support_obj =  supportObj.getValue(),
+                                           .obj = obj.getValue(),
+                                           .cost_isometry = debug_pure_isometry_term.getValue(),
+                                           .cost_regularity = debug_pure_regularity_term.getValue(),
+                                           .cost_alignment = debug_pure_alignment_term.getValue(),
+                                           .cost_alignment_full = debug_pure_alignment_term_full.getValue()
+                                       });
 #ifndef GUROBI_NON_VERBOSE
             cout << "Support obj: " << supportObj.getValue() << std::endl;
             cout << "Obj: " << obj.getValue() << std::endl;
+            cout << "pure iso: " << debug_pure_isometry_term.getValue() << std::endl;
+            cout << "pure reg: " << debug_pure_regularity_term.getValue() << std::endl;
+            cout << "pure align: " << debug_pure_alignment_term.getValue() << std::endl;
+            cout << "pure align (incl. skipped!): " << debug_pure_alignment_term_full.getValue() << std::endl;
 #endif
             gap = model.get(GRB_DoubleAttr_MIPGap);
 
@@ -855,7 +903,10 @@ inline void solveILP(
             cout << "Error code = " << e.getErrorCode() << std::endl;
             cout << e.getMessage() << std::endl;
 
-            status = ILPStatus::INFEASIBLE;
+            if (e.getErrorCode() != GRB_MEM_LIMIT) {
+                // when the soft memory limit is reached, we can still have a feasible solution.
+                status = ILPStatus::INFEASIBLE;
+            }
         }
 
         it++;
@@ -863,6 +914,7 @@ inline void solveILP(
     while (status == ILPStatus::SOLUTIONFOUND && it < repeatLosingConstraintsIterations + 1 && !allRespectConstraints);
 
     ilpResults = result;
+    return ilp_result;
 }
 
 inline void getChartSubsideSum(

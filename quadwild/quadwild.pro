@@ -14,7 +14,7 @@ HEADERS += \
 
 #App config
 TARGET = quadwild
-CONFIG += c++11
+CONFIG += c++20
 CONFIG -= app_bundle
 
 macx {
@@ -34,7 +34,7 @@ CONFIG(debug, debug|release){
 CONFIG(release, debug|release){
     DEFINES -= DEBUG
     #just uncomment next line if you want to ignore asserts and got a more optimized binary
-    CONFIG += FINAL_RELEASE
+    #CONFIG += FINAL_RELEASE
 }
 
 #Final release optimization flag
@@ -66,6 +66,7 @@ SOURCES += \
     $$LIBIGL_PATH/include/igl/principal_curvature.cpp \
     $$QUADRANGULATE_PATH/load_save.cpp \
     $$QUADRANGULATE_PATH/quad_from_patches.cpp \
+    $$QUADRANGULATE_PATH/stopwatches.cpp \
     $$VCGLIB_PATH/wrap/ply/plylib.cpp
 
 #vcglib
@@ -92,6 +93,7 @@ contains(DEFINES, COMISO_FIELD) {
     SOURCES += \
         $$LIBIGL_PATH/include/igl/copyleft/comiso/nrosy.cpp
 }
+
 
 #libigl
 INCLUDEPATH += $$LIBIGL_PATH/include

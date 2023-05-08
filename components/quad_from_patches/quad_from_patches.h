@@ -27,11 +27,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define QUADFROMPATCHES_H
 
 #include <quadretopology/quadretopology.h>
+#include <quadretopology/qr_eval_quantization.h>
 
 namespace qfp {
 
+struct QuadrangulationResult {
+    std::vector<Satsuma::BiMDFFullResult> bimdf_results; // empty if ILP was used
+    std::vector<QuadRetopology::FlowStats> flow_stats;
+    std::vector<std::vector<QuadRetopology::ILPStats>> ilp_stats_per_cluster;
+    QuadRetopology::QuantizationEvaluation eval;
+    Timekeeper::HierarchicalStopWatchResult stopwatch;
+};
+
 template<class PolyMesh, class TriangleMesh>
-void quadrangulationFromPatches(
+QuadrangulationResult
+quadrangulationFromPatches(
     TriangleMesh& trimesh,
     const std::vector<std::vector<size_t>>& trimeshPartitions,
     const std::vector<std::vector<size_t>>& trimeshCorners,

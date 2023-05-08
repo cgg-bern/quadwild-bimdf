@@ -3,7 +3,7 @@
 #App config
 TARGET = quad_from_patches
 TEMPLATE = app
-CONFIG += c++11
+CONFIG += c++20
 CONFIG -= app_bundle
 
 #Debug/release optimization flags
@@ -11,9 +11,9 @@ CONFIG(debug, debug|release){
     DEFINES += DEBUG
 }
 CONFIG(release, debug|release){
-    DEFINES -= DEBUG
+    #DEFINES -= DEBUG
     #just uncomment next line if you want to ignore asserts and got a more optimized binary
-    CONFIG += FINAL_RELEASE
+    #CONFIG += FINAL_RELEASE
 }
 
 #Final release optimization flag
@@ -83,7 +83,8 @@ SOURCES +=  \
     load_save.cpp \
     main.cpp \
     quad_from_patches.cpp \
-    quad_mesh_tracer.cpp
+    quad_mesh_tracer.cpp \
+    stopwatches.cpp
 
 HEADERS += \
     load_save.h \

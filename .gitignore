@@ -37,7 +37,8 @@
 
 # Build
 *Makefile
-*build*
-*Build*
-*build/*
-*Build/*
+build/
+build*/
+CMakeLists.txt.user
+.cache
+/build*

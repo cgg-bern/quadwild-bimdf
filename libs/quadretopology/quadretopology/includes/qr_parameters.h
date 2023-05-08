@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define QR_PARAMETERS_H
 
 #include <vector>
+#include <string>
 
 #define DEFAULTINITIALREMESHING true
 #define DEFAULTEDGEFACTOR 1
@@ -68,6 +69,9 @@ namespace QuadRetopology {
 enum ILPMethod { LEASTSQUARES, ABS };
 
 struct Parameters {
+    bool useFlowSolver = true;
+    std::string flow_config_filename;
+    std::string satsuma_config_filename;
     bool initialRemeshing;
     double initialRemeshingEdgeFactor;
     bool reproject;

@@ -5,7 +5,6 @@
 #include <mesh_manager.h>
 #include <vcg/space/box3.h>
 #include <tracing/mesh_type.h>
-#include <tracing/tracer_interface.h>
 
 #include <load_save.h>
 #include <mesh_types.h>
@@ -39,7 +38,7 @@ void remeshAndField(
         const std::string& meshFilename,
         const std::string& sharpFilename,
         const std::string& fieldFilename);
-void trace(const std::string& path, TraceMesh& traceTrimesh);
+
 void quadrangulate(
         const std::string& path,
         TriangleMesh& trimeshToQuadrangulate,

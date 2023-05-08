@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "trace.h"
 
 inline void remeshAndField(
         FieldTriMesh& trimesh,
@@ -10,7 +11,7 @@ inline void remeshAndField(
     typename MeshPrepocess<FieldTriMesh>::BatchParam BPar;
     BPar.DoRemesh=parameters.remesh;
     BPar.feature_erode_dilate=4;
-    BPar.remesher_aspect_ratio=0.3;
+    BPar.remesher_aspect_ratio=0.35; // from field_computation/basic_setup*.txt
     BPar.remesher_iterations=15;
     BPar.remesher_termination_delta=10000;
     BPar.SharpFactor=6;
@@ -35,78 +36,15 @@ inline void remeshAndField(
         MeshPrepocess<FieldTriMesh>::BatchProcess(trimesh,BPar,FieldParam);
     }
     else {
-        trimesh.LoadField(fieldFilename.c_str());
+        bool success = trimesh.LoadField(fieldFilename.c_str());
+        if (!success) {
+            throw std::runtime_error(std::string("failed to load field  from '") + fieldFilename + "'");
+        }
     }
 
     MeshPrepocess<FieldTriMesh>::SaveAllData(trimesh,meshFilename);
 }
 
-inline void trace(const std::string& filename, TraceMesh& traceTrimesh)
-{
-    //Get base filename
-    std::string baseFilename=filename;
-    baseFilename.erase(baseFilename.find_last_of("."));
-
-    std::string meshFilename=baseFilename;
-    meshFilename.append("_rem.obj");
-    std::cout<<"Loading Remeshed M:"<<meshFilename.c_str()<<std::endl;
-
-    std::string fieldFilename=baseFilename;
-    fieldFilename.append("_rem.rosy");
-    std::cout<<"Loading Rosy Field:"<<fieldFilename.c_str()<<std::endl;
-
-    std::string sharpFilename=baseFilename;
-    sharpFilename.append("_rem.sharp");
-    std::cout<<"Loading Sharp F:"<<sharpFilename.c_str()<<std::endl;
-
-    //Mesh load
-    printf("Loading the mesh \n");
-    bool loadedMesh=traceTrimesh.LoadMesh(meshFilename);
-    assert(loadedMesh);
-    traceTrimesh.UpdateAttributes();
-
-    //Field load
-    bool loadedField=traceTrimesh.LoadField(fieldFilename);
-    assert(loadedField);
-    traceTrimesh.UpdateAttributes();
-
-    //Sharp load
-    bool loadedFeatures=traceTrimesh.LoadSharpFeatures(sharpFilename);
-    assert(loadedFeatures);
-    traceTrimesh.SolveGeometricIssues();
-    traceTrimesh.UpdateSharpFeaturesFromSelection();
-
-    //preprocessing mesh
-    PreProcessMesh(traceTrimesh);
-
-    //initializing graph
-    VertexFieldGraph<TraceMesh> VGraph(traceTrimesh);
-    VGraph.InitGraph(false);
-
-    //INIT TRACER
-    typedef PatchTracer<TraceMesh> TracerType;
-    TracerType PTr(VGraph);
-    TraceMesh::ScalarType Drift=100;
-    bool add_only_needed=true;
-    bool final_removal=true;
-    bool meta_mesh_collapse=true;
-    bool force_split=false;
-    PTr.sample_ratio=0.01;
-    PTr.CClarkability=1;
-    PTr.split_on_removal=true;
-    PTr.away_from_singular=true;
-    PTr.match_valence=true;
-    PTr.check_quality_functor=false;
-    PTr.MinVal=3;
-    PTr.MaxVal=5;
-    PTr.Concave_Need=1;
-
-    //TRACING
-    PTr.InitTracer(Drift,false);
-    RecursiveProcess<TracerType>(PTr,Drift, add_only_needed,final_removal,true,meta_mesh_collapse,force_split,true,false);
-    PTr.SmoothPatches();
-    SaveAllData(PTr,baseFilename,0,false,false);
-}
 
 inline void quadrangulate(
         const std::string& filename,
@@ -131,8 +69,9 @@ inline void quadrangulate(
     int mask;
     vcg::tri::io::ImporterOBJ<TriangleMesh>::LoadMask(meshFilename.c_str(), mask);
     int err = vcg::tri::io::ImporterOBJ<TriangleMesh>::Open(trimeshToQuadrangulate, meshFilename.c_str(), mask);
-    if ((err!=0)&&(err!=5))
-        assert(0);
+    if ((err!=0)&&(err!=5)) {
+        throw std::runtime_error("error importing obj file " + meshFilename);
+    }
 
     //FACE PARTITIONS
     std::string partitionFilename = baseFilename;
@@ -156,7 +95,7 @@ inline void quadrangulate(
     std::string featureCFilename = baseFilename;
     featureCFilename.append("_p0.c_feature");
     trimeshFeaturesC = loadFeatureCorners(featureCFilename);
-    std::cout<<"Loaded "<<featureCFilename.size()<<" corner features"<<std::endl;
+    std::cout<<"Loaded "<<trimeshFeaturesC.size()<<" corner features"<<std::endl;
     loadFeatureCorners(featureCFilename);
 
     std::cout<<"Alpha: "<<parameters.alpha<<std::endl;
@@ -218,7 +157,8 @@ inline void quadrangulate(
 
     scaleFactor=parameters.scaleFact;
 
-    fixedChartClusters=300;
+    fixedChartClusters=300; //  TODO: load from parameter struct / file
+    fixedChartClusters=0;
 
     qParameters.chartSmoothingIterations = 0; //Chart smoothing
     qParameters.quadrangulationFixedSmoothingIterations = 0; //Smoothing with fixed borders of the patches
@@ -288,7 +228,9 @@ inline bool loadConfigFile(const std::string& filename, Parameters& parameters)
 {
     FILE *f=fopen(filename.c_str(),"rt");
 
-    if (f==NULL)return false;
+    if (f==NULL) {
+        throw std::runtime_error(std::string("Failed to open config file ") + filename);
+    }
 
     std::cout<<"READ CONFIG FILE"<<std::endl;
 

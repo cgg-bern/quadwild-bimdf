@@ -1,6 +1,38 @@
 [submodule "libs/vcglib"]
 	path = libs/vcglib
-	url = ../../cnr-isti-vclab/vcglib
+	url = https://github.com/cnr-isti-vclab/vcglib.git
 [submodule "libs/xfield_tracer"]
 	path = libs/xfield_tracer
 	url = https://github.com/nicopietroni/xfield_tracer
+[submodule "libs/satsuma"]
+	path = libs/satsuma
+	url = https://github.com/cgg-bern/libsatsuma
+	branch = main
+[submodule "libs/lemon"]
+	path = libs/lemon
+	url = https://github.com/cgg-bern/lemon
+	branch = cgg
+[submodule "libs/json"]
+	path = libs/json
+	url = https://github.com/nlohmann/json.git
+[submodule "cmake-library"]
+	path = cmake-library
+	url = https://www.graphics.rwth-aachen.de:9000/cmake/cmake-library.git
+[submodule "libs/OpenMesh"]
+	path = libs/OpenMesh
+	url = https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
+[submodule "libs/CoMISo"]
+	path = libs/CoMISo
+	url = https://www.graphics.rwth-aachen.de:9000/CoMISo/CoMISo.git
+[submodule "libs/eigen"]
+	path = libs/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "libs/libigl"]
+	path = libs/libigl
+	url = https://github.com/libigl/libigl.git
+[submodule "libs/timekeeper"]
+	path = libs/timekeeper
+	url = https://github.com/cgg-bern/libTimekeeper
+[submodule "libs/blossom5-cmake"]
+	path = libs/blossom5-cmake
+	url = https://github.com/cgg-bern/blossom5-cmake

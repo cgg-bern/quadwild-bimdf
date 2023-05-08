@@ -46,13 +46,34 @@ int main(int argc, char *argv[])
     std::vector<std::vector<size_t>> quadmeshCorners;
     std::vector<int> ilpResult;
 
-    if (argc==1)
+    if (argc < 4)
     {
-        std::cout<<"Please specify a mesh (OBJ or PLY) as argument"<<std::endl;
-        exit(0);
+        std::cerr << "usage: " << argv[0]
+                  << " <mesh.{obj,ply}>"
+                     " <1|2|3>"
+                     " [*.sharp|*.rosy|*.txt]....\n"
+                     " The 1|2|3 parameter determines after which step to stop:"
+                     "   1: Remesh and field\n"
+                     "   2: Tracing\n"
+                     "   3: Quadrangulation\n";
+        return 1;
     }
 
-    std::string meshFilename=std::string(argv[1]);
+    std::string meshFilename=argv[1];
+    if (meshFilename.size() < 4) {
+        std::cerr << "invalid mesh filename '" << meshFilename << "'" << std::endl;
+        return 1;
+    }
+    auto meshFilenamePrefix = std::string(meshFilename.begin(), meshFilename.end() - 4);
+
+    int stopAfterStep = std::atoi(argv[2]);
+    if (stopAfterStep < 1 || stopAfterStep > 3) {
+        std::cerr << "unknown step '" << argv[2]
+            << "' to stop after. valid: 1, 2, 3" << std::endl;
+        return 1;
+    }
+
+
     std::string sharpFilename;
     std::string fieldFilename;
 
@@ -60,9 +81,9 @@ int main(int argc, char *argv[])
     std::setlocale(LC_NUMERIC, "en_US.UTF-8");
 
     std::cout<<"Reading input..."<<std::endl;
-    loadConfigFile("basic_setup.txt", parameters);
 
-    for (int i=2;i<argc;i++)
+    std::string configFile = "basic_setup.txt";
+    for (int i=3;i<argc;i++)
     {
         int position;
 
@@ -79,6 +100,7 @@ int main(int argc, char *argv[])
         position=pathTest.find(".txt");
         if (position!=-1)
         {
+           configFile = pathTest;
            loadConfigFile(pathTest.c_str(), parameters);
            continue;
         }
@@ -90,7 +112,13 @@ int main(int argc, char *argv[])
            parameters.hasField=true;
            continue;
         }
+        std::cerr << "don't know what to do with optional parameter '"
+                  << pathTest
+                  << "'. Please supply .sharp, .txt or .rosy files."
+                  << std::endl;
+        return 1;
     }
+    loadConfigFile(configFile, parameters);
 
 
     std::cout<<"Loading:"<<meshFilename.c_str()<<std::endl;
@@ -109,11 +137,19 @@ int main(int argc, char *argv[])
 
     std::cout<<std::endl<<"--------------------- 1 - Remesh and field ---------------------"<<std::endl;
     remeshAndField(trimesh, parameters, meshFilename, sharpFilename, fieldFilename);
+    if (stopAfterStep == 1) {
+        return 0;
+    }
 
     std::cout<<std::endl<<"--------------------- 2 - Tracing ---------------------"<<std::endl;
-    trace(meshFilename, traceTrimesh);
+
+    meshFilenamePrefix += "_rem";
+    trace(meshFilenamePrefix, traceTrimesh);
+    if (stopAfterStep == 2) {
+        return 0;
+    }
 
     std::cout<<std::endl<<"--------------------- 3 - Quadrangulation ---------------------"<<std::endl;
-    quadrangulate(meshFilename, trimeshToQuadrangulate, quadmesh, trimeshPartitions, trimeshCorners, trimeshFeatures, trimeshFeaturesC, quadmeshPartitions, quadmeshCorners, ilpResult, parameters);
+    quadrangulate(meshFilenamePrefix + ".obj", trimeshToQuadrangulate, quadmesh, trimeshPartitions, trimeshCorners, trimeshFeatures, trimeshFeaturesC, quadmeshPartitions, quadmeshCorners, ilpResult, parameters);
 }
 

@@ -5,8 +5,7 @@
 #include <stdio.h>
 
 #include "mesh_types.h"
-#include <QFileInfo>
-#include <QString>
+#include <fstream>
 #include <wrap/io_trimesh/import.h>
 #include <wrap/io_trimesh/export.h>
 
@@ -14,13 +13,24 @@ std::string pathM,pathF,pathS,pathPatch,pathMeshPatch,pathProject;
 
 TriangleMesh mesh,patch_mesh;
 
+bool can_open_file(std::string const&filename) {
+    std::ifstream f(filename);
+    bool good = f.good();
+    if (!good) {
+        std::cerr << "cannot open " << filename << std::endl;
+    }
+    return good;
+}
+
 int main(int argc, char *argv[])
 {
     //MESH LOAD
+    if (argc != 2) {
+        std::cerr << "usage: " << argv[0] << " <mesh_file>" << std::endl;
+        return 1;
+    }
     pathM=std::string(argv[1]);
-    QString pathMQ=QString(pathM.c_str());
-    QFileInfo f_infoM(pathMQ);
-    if (!f_infoM.exists())
+    if (!can_open_file(pathM))
     {
         std::cout<<"error: mesh fileneme wrong"<<std::endl;
         fflush(stdout);
@@ -40,12 +50,9 @@ int main(int argc, char *argv[])
     //FIELD LOAD
     pathF=pathProject;
     pathF.append(".rosy");
-    QString pathFQ=QString(pathF.c_str());
-    QFileInfo f_infoF(pathFQ);
-    if (!f_infoF.exists())
+    if (!can_open_file(pathF))
     {
-        printf("error: field fileneme wrong\n");
-        fflush(stdout);
+        std::cout << "error: field filename wrong, does not exist: " << pathF << std::endl;
         exit(0);
     }
     else
@@ -70,9 +77,7 @@ int main(int argc, char *argv[])
     //SHARP LOAD
     pathS=pathProject;
     pathS.append(".sharp");
-    QString pathSQ=QString(pathS.c_str());
-    QFileInfo f_infoS(pathSQ);
-    if (!f_infoS.exists())
+    if (!can_open_file(pathS))
     {
         printf("no feature line \n");
         fflush(stdout);
@@ -94,9 +99,7 @@ int main(int argc, char *argv[])
     //PATCH MESH LOAD
     pathMeshPatch=pathProject;
     pathMeshPatch.append("_p0.obj");
-    QString pathMPQ=QString(pathMeshPatch.c_str());
-    QFileInfo f_infoMP(pathMPQ);
-    if (!f_infoMP.exists())
+    if (!can_open_file(pathMeshPatch))
     {
         printf("no mesh patch file \n");
         fflush(stdout);
@@ -114,9 +117,7 @@ int main(int argc, char *argv[])
     //PATCH LOAD
     pathPatch=pathProject;
     pathPatch.append("_p0.patch");
-    QString pathPQ=QString(pathPatch.c_str());
-    QFileInfo f_infoP(pathPQ);
-    if (!f_infoP.exists())
+    if (!can_open_file(pathPatch))
     {
         printf("no patch file \n");
         fflush(stdout);

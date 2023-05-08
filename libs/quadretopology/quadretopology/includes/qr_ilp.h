@@ -28,19 +28,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "qr_charts.h"
 #include "qr_parameters.h"
+#include <nlohmann/json.hpp>
 
-#include <gurobi_c++.h>
+#define MIN_SUBDIVISION_VALUE 1
 
 #define ILP_FIND_SUBDIVISION -1
-#define ILP_IGNORE -2
+#define ILP_IGNORE -2           // subside belongs to another cluster
 
 namespace QuadRetopology {
+
+struct ILPStats {
+    double support_obj;
+    double obj;
+    double cost_isometry;
+    double cost_regularity;
+    double cost_alignment;
+    double cost_alignment_full; // including dropped constraints
+};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ILPStats,
+                                   support_obj,
+                                   obj,
+                                   cost_isometry,
+                                   cost_regularity,
+                                   cost_alignment,
+                                   cost_alignment_full);
+
+struct ILPResult {
+    std::vector<ILPStats> stats;
+};
 
 enum ILPStatus { SOLUTIONFOUND, SOLUTIONWRONG, INFEASIBLE };
 
 namespace internal {
 
-void solveILP(
+ILPResult solveILP(
         const ChartData& chartData,     
         const std::vector<double>& chartEdgeLength,
         const ILPMethod& method,
@@ -68,6 +89,6 @@ void solveILP(
 }
 }
 
-#include "qr_ilp.cpp"
+//#include "qr_ilp.cpp"
 
 #endif // QR_ILP_H

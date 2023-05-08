@@ -48,7 +48,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Basic subdivision class
 template <class FaceType>
-struct SplitLev : public   std::unary_function<vcg::face::Pos<FaceType> ,typename FaceType::CoordType >
+struct SplitLev // : public   std::unary_function<vcg::face::Pos<FaceType> ,typename FaceType::CoordType >
 {
     typedef typename FaceType::CoordType CoordType;
     typedef typename FaceType::VertexType VertexType;
@@ -481,7 +481,7 @@ class MeshPrepocess
             std::cout << "removed " << removed << " non manifold vertices..." << std::endl;
         }
         while (removed > 0 && i < max_step);
-
+        return modified;
     }
 
     static bool MakeOrientable(MeshType &mesh)

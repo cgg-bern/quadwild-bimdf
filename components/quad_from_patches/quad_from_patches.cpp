@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "quad_from_patches.h"
 #include <quadretopology/quadretopology.h>
+#include <quadretopology/qr_eval_quantization.h>
 #include <random>
 
 #ifdef SAVE_MESHES_FOR_DEBUG
@@ -36,7 +37,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace qfp {
 
 template<class PolyMesh, class TriangleMesh>
-void quadrangulationFromPatches(
+QuadrangulationResult
+quadrangulationFromPatches(
     TriangleMesh& trimesh,
     const std::vector<std::vector<size_t>>& trimeshPartitions,
     const std::vector<std::vector<size_t>>& trimeshCorners,
@@ -48,18 +50,34 @@ void quadrangulationFromPatches(
     std::vector<std::vector<size_t>>& quadmeshCorners,
     std::vector<int>& ilpResult)
 {
+    using HSW = Timekeeper::HierarchicalStopWatch;
+    HSW sw_root{"qfp"};
+    HSW sw_quadrangulate("quadrangulate", sw_root);
+    HSW sw_compute_chart_data("compute_chart_data", sw_root);
+
+    std::vector<Satsuma::BiMDFFullResult> bimdf_results; // empty if ILP was used
+    std::vector<QuadRetopology::FlowStats> flow_stats;
+    std::vector<std::vector<QuadRetopology::ILPStats>> ilp_stats_per_cluster;
+
+    sw_root.resume();
+    std::vector<Timekeeper::HierarchicalStopWatchResult> sw_results;
+
     assert(trimeshPartitions.size() == trimeshCorners.size() && chartEdgeLength.size() == trimeshPartitions.size());
 
+
     //Get chart data
+    sw_compute_chart_data.resume();
     QuadRetopology::ChartData chartData = QuadRetopology::computeChartData(
             trimesh,
             trimeshPartitions,
             trimeshCorners);
+    sw_compute_chart_data.stop();
 
 
     //Initialize ilp results
     ilpResult.clear();
     ilpResult.resize(chartData.subsides.size(), ILP_FIND_SUBDIVISION);
+
 
     bool solvedCluster = false;
     if (fixedChartClusters > 0 && fixedChartClusters < static_cast<int>(chartData.charts.size())) {
@@ -253,12 +271,19 @@ void quadrangulationFromPatches(
                     }
 
                     double gap;
-                    QuadRetopology::findSubdivisions(
-                        chartData,
-                        chartEdgeLength,
-                        parameters,
-                        gap,
-                        result);
+                    {
+                      auto subdiv_res = QuadRetopology::findSubdivisions(
+                          chartData,
+                          chartEdgeLength,
+                          parameters,
+                          gap,
+                          result);
+                      sw_results.push_back(std::move(subdiv_res.stopwatch));
+                      assert(subdiv_res.bimdf_results.empty()); // Flow does not work on clusters
+                      if (!subdiv_res.ilp_stats.empty()) {
+                          ilp_stats_per_cluster.push_back(std::move(subdiv_res.ilp_stats));
+                      }
+                    }
 
                     for (size_t subsideId = 0; subsideId < chartData.subsides.size(); subsideId++) {
                         if (result[subsideId] != ILP_IGNORE && ilpResult[subsideId] == ILP_FIND_SUBDIVISION) {
@@ -269,30 +294,57 @@ void quadrangulationFromPatches(
             }
         }
     }
+
     if (!solvedCluster) {
         //Solve ILP to find best side size
         double gap;
-        QuadRetopology::findSubdivisions(
-            chartData,
-            chartEdgeLength,
-            parameters,
-            gap,
-            ilpResult);
+        {
+          auto subdiv_res = QuadRetopology::findSubdivisions(
+              chartData,
+              chartEdgeLength,
+              parameters,
+              gap,
+              ilpResult);
+          bimdf_results = std::move(subdiv_res.bimdf_results);
+          flow_stats = std::move(subdiv_res.flow_stats);
+          if (!subdiv_res.ilp_stats.empty()) {
+              ilp_stats_per_cluster.push_back({std::move(subdiv_res.ilp_stats)});
+          }
+
+          sw_results.push_back(std::move(subdiv_res.stopwatch));
+        }
     }
+
+    auto quant_eval = QuadRetopology::evaluate_quantization(chartData, chartEdgeLength, parameters, ilpResult);
+    std::cout << "quantisation evaluation results: \n " << quant_eval << std::endl;
 
     //Quadrangulate
     std::vector<size_t> fixedPositionSubsides;
     std::vector<int> quadmeshLabel;
-    QuadRetopology::quadrangulate(
-            trimesh,
-            chartData,
-            fixedPositionSubsides,
-            ilpResult,
-            parameters,
-            quadmesh,
-            quadmeshLabel,
-            quadmeshPartitions,
-            quadmeshCorners);
+    {
+      Timekeeper::ScopedStopWatch _{sw_quadrangulate};
+      QuadRetopology::quadrangulate(
+              trimesh,
+              chartData,
+              fixedPositionSubsides,
+              ilpResult,
+              parameters,
+              quadmesh,
+              quadmeshLabel,
+              quadmeshPartitions,
+              quadmeshCorners);
+    }
+    sw_root.stop();
+    auto sw_result = Timekeeper::HierarchicalStopWatchResult(sw_root);
+    for (const auto &r: sw_results) {
+        sw_result.add_child(r);
+    }
+    return {
+        .bimdf_results = std::move(bimdf_results),
+        .flow_stats = std::move(flow_stats),
+        .ilp_stats_per_cluster = std::move(ilp_stats_per_cluster),
+        .eval = std::move(quant_eval),
+        .stopwatch = sw_result};
 }
 
 }

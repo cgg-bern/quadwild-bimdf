@@ -36,11 +36,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <wrap/io_trimesh/import.h>
 #include <wrap/io_trimesh/export.h>
+
 #include "smooth_mesh.h"
 #include "quad_from_patches.h"
-#include "quad_mesh_tracer.h"
+//#include "quad_mesh_tracer.h"
 
 #include <clocale>
+
+#include <libTimekeeper/StopWatch.hh>
+#include <libTimekeeper/StopWatchPrinting.hh>
+
+#include <nlohmann/json.hpp>
+#include <libsatsuma/Extra/json.hh>
+#include <libTimekeeper/json.hh>
+#include <quadretopology/qr_eval_quantization_json.h>
+
+#include <iostream>
+
+using HSW = Timekeeper::HierarchicalStopWatch;
+using Timekeeper::ScopedStopWatch;
 
 bool LocalUVSm=false;
 typename TriangleMesh::ScalarType avgEdge(const TriangleMesh& trimesh);
@@ -50,6 +64,13 @@ void SaveSetupFile(const std::string& path, QuadRetopology::Parameters& paramete
 
 int main(int argc, char *argv[])
 {
+    HSW sw_root("main");
+    HSW sw_load("load", sw_root);
+    HSW sw_smooth("smooth", sw_root);
+    HSW sw_save("save", sw_root);
+
+    sw_root.resume();
+
     //Use "." as decimal separator
     std::setlocale(LC_NUMERIC, "en_US.UTF-8");
 
@@ -83,28 +104,38 @@ int main(int argc, char *argv[])
 //    parameters.repeatLosingConstraintsNonQuads = false;
 //    parameters.repeatLosingConstraintsAlign = true;
 //    parameters.hardParityConstraint = true; //Flag to choose if use hard constraints or not
-
-    QuadRetopology::Parameters parameters;
-    float scaleFactor;
-    int fixedChartClusters;
-    loadSetupFile(std::string("basic_setup.txt"), parameters, scaleFactor, fixedChartClusters);
-
-    parameters.chartSmoothingIterations = 0; //Chart smoothing
-    parameters.quadrangulationFixedSmoothingIterations = 0; //Smoothing with fixed borders of the patches
-    parameters.quadrangulationNonFixedSmoothingIterations = 0; //Smoothing with fixed borders of the quadrangulation
-    parameters.feasibilityFix = false;
-
-    if(argc<2)
+    if(argc<2 || argc > 5)
     {
-        printf("error: pass one mesh as parameter \n");
-        fflush(stdout);
-        exit(0);
+        std::cerr << "usage: " << argv[0] << " <input.obj> [num] [setup.txt] [out_stats.json]"
+                  << std::endl;
+        exit(1);
     }
 
     if (argc>2)
     {
         CurrNum=atoi(argv[2]);
     }
+    std::string configFilename = "basic_setup.txt";
+    if (argc>3) {
+        configFilename = argv[3];
+    }
+    std::string json_filename = "";
+    if (argc>4) {
+        json_filename = argv[4];
+    }
+    QuadRetopology::Parameters parameters;
+    float scaleFactor;
+    int fixedChartClusters;
+
+    sw_load.resume();
+    loadSetupFile(configFilename, parameters, scaleFactor, fixedChartClusters);
+
+    parameters.chartSmoothingIterations = 0; //Chart smoothing
+    parameters.quadrangulationFixedSmoothingIterations = 0; //Smoothing with fixed borders of the patches
+    parameters.quadrangulationNonFixedSmoothingIterations = 0; //Smoothing with fixed borders of the quadrangulation
+    parameters.feasibilityFix = false;
+
+
     //MESH LOAD
     std::string meshFilename = std::string(argv[1]);
     int mask;
@@ -154,12 +185,16 @@ int main(int argc, char *argv[])
 
     OrientIfNeeded(trimesh,trimeshPartitions,trimeshCorners,trimeshFeatures,trimeshFeaturesC);
 
+    sw_load.stop();
+
     //COMPUTE QUADRANGULATION
     QuadRetopology::internal::updateAllMeshAttributes(trimesh);
     double EdgeSize=avgEdge(trimesh)*scaleFactor;
     std::cout<<"Edge Size "<<EdgeSize<<std::endl;
     const std::vector<double> edgeFactor(trimeshPartitions.size(), EdgeSize);
-    qfp::quadrangulationFromPatches(trimesh, trimeshPartitions, trimeshCorners, edgeFactor, parameters, fixedChartClusters, quadmesh, quadmeshPartitions, quadmeshCorners, ilpResult);
+    auto qfp_result = qfp::quadrangulationFromPatches(trimesh, trimeshPartitions, trimeshCorners, edgeFactor, parameters, fixedChartClusters, quadmesh, quadmeshPartitions, quadmeshCorners, ilpResult);
+
+
 
     //COLOR AND SAVE QUADRANGULATION
     vcg::tri::UpdateColor<PolyMesh>::PerFaceConstant(quadmesh);
@@ -175,17 +210,23 @@ int main(int argc, char *argv[])
 
 //    size_t CurrNum=FindCurrentNum(meshFilename);
 
+    sw_save.resume();
     //SAVE OUTPUT
     std::string outputFilename = meshFilename;
     outputFilename.erase(partitionFilename.find_last_of("."));
     outputFilename+=std::string("_")+std::to_string(CurrNum)+std::string("_quadrangulation")+std::string(".obj");
     vcg::tri::io::ExporterOBJ<PolyMesh>::Save(quadmesh, outputFilename.c_str(), vcg::tri::io::Mask::IOM_FACECOLOR);
 
+    sw_save.stop();
 
 //    ReMapBoundaries(trimesh,quadmesh,trimeshCorners,trimeshPartitions,
 //                    quadmeshCorners,quadmeshPartitions);
 
 
+#define SMOOTH_OUTPUT
+#ifdef SMOOTH_OUTPUT
+
+    sw_smooth.resume();
     //SMOOTH
     std::vector<size_t> QuadPart(quadmesh.face.size(),0);
     for (size_t i=0;i<quadmeshPartitions.size();i++)
@@ -212,6 +253,8 @@ int main(int argc, char *argv[])
     else
         MultiCostraintSmooth(quadmesh,trimesh,trimeshFeatures,trimeshFeaturesC,TriPart,QuadCornersVect,QuadPart,0.5,EdgeSize,30,1);
 
+    sw_smooth.stop();
+    sw_save.resume();
     //SAVE OUTPUT
     outputFilename = meshFilename;
     outputFilename.erase(partitionFilename.find_last_of("."));
@@ -219,8 +262,11 @@ int main(int argc, char *argv[])
     outputFilename+=std::string("_")+std::to_string(CurrNum)+std::string("_quadrangulation_smooth")+std::string(".obj");
 
     vcg::tri::io::ExporterOBJ<PolyMesh>::Save(quadmesh, outputFilename.c_str(), vcg::tri::io::Mask::IOM_FACECOLOR);
+    sw_save.stop();
+#endif
 
 #ifdef SAVE_MESHES_FOR_DEBUG
+    sw_save.start();
     QuadMeshTracer<PolyMesh> tracerMotorcycle(quadmesh);
     tracerMotorcycle.MotorCycle = true;
     tracerMotorcycle.TracePartitions();
@@ -229,12 +275,14 @@ int main(int argc, char *argv[])
     tracer.MotorCycle = false;
     tracer.TracePartitions();
     tracer.SaveColoredMesh("results/quadlayout.obj");
+    sw_save.stop();
 #endif
 
-    for(size_t i=0;i<trimesh.face.size();i++)
-        trimesh.face[i].C()=vcg::Color4b::Scatter(trimeshPartitions.size(),TriPart[i]);
 
 #ifdef SAVE_MESHES_FOR_DEBUG
+    sw_save.start();
+    for(size_t i=0;i<trimesh.face.size();i++)
+        trimesh.face[i].C()=vcg::Color4b::Scatter(trimeshPartitions.size(),TriPart[i]);
    vcg::tri::io::ExporterOBJ<TriangleMesh>::Save(trimesh,"results/test_tri.obj", vcg::tri::io::Mask::IOM_FACECOLOR);
 
 
@@ -244,7 +292,28 @@ int main(int argc, char *argv[])
    setupFilename+=std::string("_")+std::to_string(CurrNum)+std::string("_quadrangulation_setup")+std::string(".txt");
 
    SaveSetupFile(setupFilename, parameters, scaleFactor, fixedChartClusters);
+    sw_save.stop();
  #endif
+    sw_root.stop();
+    auto sw_result = Timekeeper::HierarchicalStopWatchResult(sw_root);
+    sw_result.add_child(qfp_result.stopwatch);
+    std::cout << "\n" << sw_result << std::endl;
+    auto json = nlohmann::json{
+      {"runtimes", sw_result},
+      {"quant_eval", qfp_result.eval}};
+    if (!qfp_result.bimdf_results.empty()) {
+        json["bimdf_results"] = qfp_result.bimdf_results;
+    }
+    if (!qfp_result.flow_stats.empty()) {
+        json["flow_stats"] = qfp_result.flow_stats;
+    }
+    if (!qfp_result.ilp_stats_per_cluster.empty()) {
+        json["ilp_stats_per_cluster"] = qfp_result.ilp_stats_per_cluster;
+    }
+    if (!json_filename.empty()) {
+      std::ofstream json_file{json_filename};
+      json_file << std::setw(4) << json;
+    }
 }
 
 
@@ -265,7 +334,9 @@ typename TriangleMesh::ScalarType avgEdge(const TriangleMesh& trimesh)
 void loadSetupFile(const std::string& path, QuadRetopology::Parameters& parameters, float& scaleFactor, int& fixedChartClusters)
 {
     FILE *f=fopen(path.c_str(),"rt");
-    assert(f!=NULL);
+    if (f == nullptr) {
+        throw std::runtime_error(std::string("cannot open setup file ") + path);
+    }
 
     float alphaF;
     fscanf(f,"alpha %f\n",&alphaF);
@@ -378,7 +449,21 @@ void loadSetupFile(const std::string& path, QuadRetopology::Parameters& paramete
     fscanf(f,"scaleFact %f\n",&scaleFactor);
     
     fscanf(f,"fixedChartClusters %d\n",&fixedChartClusters);
+    fscanf(f,"useFlowSolver %d\n",&IntVar);
+    parameters.useFlowSolver = IntVar;
+    std::cout << "useFlowSolver: " << parameters.useFlowSolver << std::endl;
+    
+    std::array<char, 1024> filename = {0};
 
+    int ret = fscanf(f,"flow_config_filename \"%1000[^\"]\"\n",filename.data());
+    parameters.flow_config_filename = filename.data();
+    std::cout << "flow_config_filename: " << parameters.flow_config_filename << std::endl;
+
+    std::fill(filename.begin(), filename.end(), 0);
+
+    ret = fscanf(f,"satsuma_config_filename \"%1000[^\"]\"\n",filename.data());
+    parameters.satsuma_config_filename = filename.data();
+    std::cout << "satsuma_config_filename: " << parameters.satsuma_config_filename << std::endl;
     fclose(f);
 }
 

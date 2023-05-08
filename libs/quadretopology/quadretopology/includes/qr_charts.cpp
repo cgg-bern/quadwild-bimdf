@@ -35,7 +35,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vcg/complex/complex.h>
 #include <wrap/io_trimesh/export.h>
 
-#define MAXITERATIONS 100000
 
 namespace QuadRetopology {
 namespace internal {

@@ -31,6 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <cmath>
 
+#define MAXITERATIONS 100000
+
 namespace QuadRetopology {
 
 struct ChartSubside {
@@ -47,11 +49,11 @@ struct ChartSubside {
 
 struct ChartSide {
     std::vector<size_t> vertices;
-    std::vector<size_t> subsides;
+    std::vector<size_t> subsides; // indexes into ChartData.subsides
     std::vector<bool> reversedSubside;
 
     double length;
-    int size;
+    int size; // number of mesh edges?
 };
 
 struct Chart {
@@ -72,12 +74,14 @@ struct ChartData {
     std::vector<ChartSubside> subsides;
 };
 
+namespace internal {
 template<class TriangleMeshType>
 void findChartFacesAndBorderFaces(
         TriangleMeshType& mesh,
         const std::vector<int>& faceLabel,
         ChartData& chartData);
 
+}
 }
 
 #include "qr_charts.cpp"
