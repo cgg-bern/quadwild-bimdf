@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <vector>
 #include <string>
+#include <quadretopology/includes/config/gurobi.hh>
 
 #define DEFAULTINITIALREMESHING true
 #define DEFAULTEDGEFACTOR 1
@@ -69,7 +70,11 @@ namespace QuadRetopology {
 enum ILPMethod { LEASTSQUARES, ABS };
 
 struct Parameters {
+#if QUADRETOPOLOGY_WITH_GUROBI
+    bool useFlowSolver = false;
+#else
     bool useFlowSolver = true;
+#endif
     std::string flow_config_filename;
     std::string satsuma_config_filename;
     bool initialRemeshing;
