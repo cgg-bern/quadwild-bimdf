@@ -46,16 +46,16 @@ int main(int argc, char *argv[])
     std::vector<std::vector<size_t>> quadmeshCorners;
     std::vector<int> ilpResult;
 
-    if (argc < 4)
+    if (argc < 2)
     {
         std::cerr << "usage: " << argv[0]
                   << " <mesh.{obj,ply}>"
-                     " <1|2|3>"
+                     " [1|2|3]"
                      " [*.sharp|*.rosy|*.txt]....\n"
-                     " The 1|2|3 parameter determines after which step to stop:"
+                     " The 1|2|3 parameter determines after which step to stop:\n"
                      "   1: Remesh and field\n"
                      "   2: Tracing\n"
-                     "   3: Quadrangulation\n";
+                     "   3: Quadrangulation (default)\n";
         return 1;
     }
 
@@ -66,11 +66,14 @@ int main(int argc, char *argv[])
     }
     auto meshFilenamePrefix = std::string(meshFilename.begin(), meshFilename.end() - 4);
 
-    int stopAfterStep = std::atoi(argv[2]);
-    if (stopAfterStep < 1 || stopAfterStep > 3) {
-        std::cerr << "unknown step '" << argv[2]
-            << "' to stop after. valid: 1, 2, 3" << std::endl;
-        return 1;
+    int stopAfterStep = 3;
+    if (argc >= 2) {
+        stopAfterStep = std::atoi(argv[2]);
+        if (stopAfterStep < 1 || stopAfterStep > 3) {
+            std::cerr << "unknown step '" << argv[2]
+                << "' to stop after. valid: 1, 2, 3" << std::endl;
+            return 1;
+        }
     }
 
 
