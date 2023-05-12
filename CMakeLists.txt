@@ -29,7 +29,7 @@ target_include_directories(Eigen3::Eigen INTERFACE "libs/eigen")
 
 add_subdirectory("libs/lemon")
 add_subdirectory("libs/blossom5-cmake")
-add_subdirectory("libs/satsuma/src")
+add_subdirectory("libs/satsuma")
 add_subdirectory("libs/timekeeper/src")
 add_subdirectory("libs/json")
 add_subdirectory("libs/OpenMesh")
