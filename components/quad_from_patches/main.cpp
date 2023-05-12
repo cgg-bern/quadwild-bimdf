@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 
     if ((err!=0)&&(err!=5))
     {
-        std::cout<<"ERROR LOADING MESH"<<std::endl;
+        std::cout<<"Error loading mesh from file " << meshFilename <<std::endl;
         exit(0);
     }
     std::cout<<"MESH NAME "<<meshFilename.c_str()<<std::endl;
