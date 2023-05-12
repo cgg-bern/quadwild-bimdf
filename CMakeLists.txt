@@ -19,9 +19,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Build/lib")
 include(CheckIPOSupported)
 check_ipo_supported()
 
-find_package(Gurobi REQUIRED)
 find_package(Threads)
 find_package(Boost REQUIRED)
+find_package(Gurobi QUIET)
 
 add_library(Eigen3::Eigen INTERFACE IMPORTED)
 target_include_directories(Eigen3::Eigen INTERFACE "libs/eigen")

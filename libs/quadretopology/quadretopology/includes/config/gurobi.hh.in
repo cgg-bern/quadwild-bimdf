@@ -1,0 +1,4 @@
+#pragma once
+
+#define  QUADRETOPOLOGY_WITH_GUROBI @WITH_GUROBI@
+
