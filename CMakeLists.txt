@@ -25,6 +25,23 @@ find_package(Gurobi QUIET)
 add_library(Eigen3::Eigen INTERFACE IMPORTED)
 target_include_directories(Eigen3::Eigen INTERFACE "libs/eigen")
 
+find_package(GMM QUIET)
+
+if (NOT TARGET GMM::GMM)
+    include(FetchContent)
+    FetchContent_Declare(gmm
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        URL http://download-mirror.savannah.gnu.org/releases/getfem/stable/gmm-5.4.2.tar.gz
+        URL_HASH SHA224=8f4951901a55a1d1987d8199ed0e0b36ff2da26c870a4c3d55694a14
+        SOURCE_DIR "libs/gmm"
+    )
+    FetchContent_MakeAvailable(gmm)
+
+    message("Downloaded GMM to ${gmm_SOURCE_DIR}")
+    set(GMM_INCLUDE_DIR "${gmm_SOURCE_DIR}/include")
+    find_package(GMM REQUIRED)
+endif()
+
 
 add_subdirectory("libs/lemon")
 add_subdirectory("libs/blossom5-cmake")
