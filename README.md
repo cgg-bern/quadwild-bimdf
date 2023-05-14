@@ -19,7 +19,7 @@ The main code for Bi-MDF modeling can be found in [libs/quadretopology/quadretop
 ## Building (classic)
 
 ```
-cmake . -B build -DSATSUMA_ENABLE_BLOSSOM5=O
+cmake . -B build -DSATSUMA_ENABLE_BLOSSOM5=0
 cmake --build build
 ```
 
