@@ -42,9 +42,12 @@ if (NOT TARGET GMM::GMM)
     find_package(GMM REQUIRED)
 endif()
 
+option(SATSUMA_ENABLE_BLOSSOM5 "Enable Blossom-V (non-free license)" OFF)
 
 add_subdirectory("libs/lemon")
-add_subdirectory("libs/blossom5-cmake")
+if(SATSUMA_ENABLE_BLOSSOM5)
+    add_subdirectory("libs/blossom5-cmake")
+endif()
 add_subdirectory("libs/satsuma")
 add_subdirectory("libs/timekeeper/src")
 add_subdirectory("libs/json")
