@@ -32,10 +32,22 @@ add_subdirectory("libs/blossom5-cmake")
 add_subdirectory("libs/satsuma")
 add_subdirectory("libs/timekeeper/src")
 add_subdirectory("libs/json")
+set(OPENMESH_BUILD_SHARED OFF) # required on windows
 add_subdirectory("libs/OpenMesh")
+if(WIN32)
+    add_library( OpenMesh::Core ALIAS OpenMeshCore)
+else()
+    add_library( OpenMesh::Core ALIAS OpenMeshCoreStatic)
+endif()
 add_subdirectory("libs/lpsolve")
 
+set(BUILD_SHARED_LIBS OFF) # static libs make distribution easier
+
 set( WANT_COMISO_QT OFF CACHE BOOL "Enable Qt support in CoMISo")
+set( DISABLE_MPI ON)
+set( DISABLE_METIS ON)
+set( DISABLE_LPSOLVE ON)
+set( COMISO_BUILD_WITHOUT_BOOST ON)
 add_subdirectory("libs/CoMISo")
 #add_subdirectory("libs/AntTweakBar") # vcglib wrapper is not compiled with vcglib's cmake :(
 

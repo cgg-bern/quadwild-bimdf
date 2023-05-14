@@ -60,7 +60,7 @@ target_link_libraries(quadretopology PUBLIC Eigen3::Eigen)
 target_link_libraries(quadretopology PUBLIC libigl::libigl)
 target_link_libraries(quadretopology PUBLIC vcglib::vcglib)
 target_link_libraries(quadretopology PUBLIC lpsolve::lpsolve)
-target_link_libraries(quadretopology PUBLIC OpenMeshCore)
+target_link_libraries(quadretopology PUBLIC OpenMesh::Core)
 target_link_libraries(quadretopology PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(quadretopology PUBLIC Boost::boost)
 
