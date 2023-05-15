@@ -32,6 +32,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <clocale>
 
+#ifdef _WIN32
+#  include <windows.h>
+#  include <stdlib.h>
+#  include <errhandlingapi.h>
+#endif
+
+
 extern TraceMesh mesh;
 extern std::string pathM;
 extern std::string pathF;
@@ -52,6 +59,13 @@ extern bool batch_process;
 
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32
+    // This make crashes very visible - without them, starting the
+    // application from cmd.exe or powershell can surprisingly hide
+    // any signs of a an application crash!
+    SetErrorMode(0);
+#endif
+
     QApplication app(argc, argv);
 
     //Use "." as decimal separator

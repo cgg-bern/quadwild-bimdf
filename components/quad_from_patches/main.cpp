@@ -53,6 +53,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <iostream>
 
+#ifdef _WIN32
+#  include <windows.h>
+#  include <stdlib.h>
+#  include <errhandlingapi.h>
+#endif
+
 using HSW = Timekeeper::HierarchicalStopWatch;
 using Timekeeper::ScopedStopWatch;
 
@@ -64,6 +70,12 @@ void SaveSetupFile(const std::string& path, QuadRetopology::Parameters& paramete
 
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32
+    // This make crashes very visible - without them, starting the
+    // application from cmd.exe or powershell can surprisingly hide
+    // any signs of a an application crash!
+    SetErrorMode(0);
+#endif
     HSW sw_root("main");
     HSW sw_load("load", sw_root);
     HSW sw_smooth("smooth", sw_root);
