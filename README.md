@@ -65,3 +65,9 @@ podman run --rm  --volume /Users:/Users quadwild-bimdf quad_from_patches argumen
 ## License
 
 QuadWild as well as our additions and changes are licensed under the [GPL3](LICENSE).
+
+
+## Acknowledgements
+
+This project has been developed as part of the [AlgoHex](https://www.algohex.eu/) project, which has received funding from the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme ([Grant agreement No. 853343](https://cordis.europa.eu/project/id/853343)).
+
