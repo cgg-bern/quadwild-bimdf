@@ -17,11 +17,28 @@ import math
 import subprocess
 import os
 
+ADDON_IDNAME = "quadwild_bimdf"
 
 TEMPDIR = os.path.join(bpy.app.tempdir, "quadwild_bimdf")
 BINDIR = "/Users/mh/tmp/quadwild-bimdf-release/macos/quadwild-bimdf-0.0.1"
 CONFDIR = "/Users/mh/github/cgg-bern/quadwild-bimdf/config"
 
+
+
+class AddonPrefs(bpy.types.AddonPreferences):
+    bl_idname = ADDON_IDNAME
+
+    quadwild_binary_filepath: bpy.props.StringProperty(
+        name="Path to quadwild binary",
+        subtype="FILE_PATH")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="QuadWild-BiMDF preferences")
+        layout.prop(self, "quadwild_binary_filepath")
+
+def get_addon_prefs(context):
+    return context.preferences.addons[ADDON_IDNAME].preferences
 
 class ProgressInfo:
     def __init__(self, area):
@@ -59,7 +76,7 @@ class QuadWildOperator(bpy.types.Operator):
     bl_idname = "quadwild_bimdf.op"                # Unique identifier for buttons and menu items to reference.
     bl_label = "Retopologize"                      # Display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
-    
+
 
     @classmethod
     def poll(self, context):
@@ -90,6 +107,9 @@ class QuadWildOperator(bpy.types.Operator):
                               export_materials=False,
                               export_triangulated_mesh=True,
                              )
+
+        binpath = addon_prefs = get_addon_prefs(context).quadwild_binary_filepath
+        print("pref ", binpath)
         self.proc = subprocess.Popen([os.path.join(BINDIR, "quadwild"),
                                       filepath,
                                       "3",
@@ -159,12 +179,16 @@ class QuadWildPanel(bpy.types.Panel):
     bl_category = "Retopo"
 
     def draw(self, context):
-        col = self.layout.column()
+        ws = context.workspace
         obj = context.active_object
+        if not obj:
+            return
+        col = self.layout.column()
         pg = obj.quadwild_propgrp
 
         box = col.box()
         box.label(text="QW Settings:")
+        #box.prop(ws, "quadwild_binary_filepath")
         box.prop(pg, "scale")
         box.prop(pg, "preprocess")
         box.prop(pg, "sharp_thresh") # TODO: option to take sharp features from blender (edge type, material boundary, ...)
@@ -183,12 +207,14 @@ CLASSES = [
         QuadWildPropGroup,
         QuadWildOperator,
         QuadWildPanel,
+        AddonPrefs,
         ]
 def register():
     print("DEBUG: QuadWild-BiMDF register()")
     for cl in CLASSES:
         bpy.utils.register_class(cl)
     bpy.types.Object.quadwild_propgrp = bpy.props.PointerProperty(type=QuadWildPropGroup)
+    #bpy.types.WorkSpace.quadwild_binary_filepath = prop_quadwild_binary_filepath
     #bpy.types.VIEW3D_MT_object.append(menu_func)  # Adds the new operator to an existing menu.
 
 def unregister():
@@ -198,6 +224,7 @@ def unregister():
 
 
 if __name__ == "__main__":
+    print(__file__)
     register()
     #bpy.ops.quadwild_bimdf.op()
 
