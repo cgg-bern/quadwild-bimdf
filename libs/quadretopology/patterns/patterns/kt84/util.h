@@ -6,7 +6,7 @@
 #include <list>
 #include <string>
 #include <sstream>
-#include <boost/algorithm/string.hpp>
+//#include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <iostream>
 #include <random>
@@ -29,6 +29,7 @@ namespace util {
     }
     template <typename T> inline T& incr_mod(T& value, const T& mod) { return value = (value + 1) % mod; }
     template <typename T> inline T& decr_mod(T& value, const T& mod) { return value = (value + mod - 1) % mod; }
+#if 0 // avoid boost dependency - not used in parent project retopology.
     inline bool ensure_filename_extension(std::string& filename, const std::string& extension_including_period) {
         auto n = extension_including_period.size();
         if (!boost::iequals(filename.substr(filename.size() - n, n), extension_including_period)) {
@@ -37,6 +38,7 @@ namespace util {
         }
         return true;
     }
+#endif
     inline void flip_bool(bool& b) { b = !b; }
     template <typename T> inline void update_if_bigger (T& val_current, const T& val_new) { if (val_current < val_new) val_current = val_new; }
     template <typename T> inline void update_if_smaller(T& val_current, const T& val_new) { if (val_current > val_new) val_current = val_new; }

@@ -20,7 +20,6 @@ include(CheckIPOSupported)
 check_ipo_supported()
 
 find_package(Threads)
-find_package(Boost REQUIRED)
 find_package(Gurobi QUIET)
 
 add_library(Eigen3::Eigen INTERFACE IMPORTED)
