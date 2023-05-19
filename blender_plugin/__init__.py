@@ -15,6 +15,13 @@ bl_info = {
 import bpy
 import math
 import subprocess
+import os
+
+
+TEMPDIR = os.path.join(bpy.app.tempdir, "quadwild_bimdf")
+BINDIR = "/Users/mh/tmp/quadwild-bimdf-release/macos/quadwild-bimdf-0.0.1"
+CONFDIR = "/Users/mh/github/cgg-bern/quadwild-bimdf/config"
+
 
 class ProgressInfo:
     def __init__(self, area):
@@ -22,8 +29,22 @@ class ProgressInfo:
 
     def update(self, text=None):
         # TODO: show wallclock time elapsed
-        self.area.header_text_set(text)
+        if self.area:
+            self.area.header_text_set(text)
     
+
+def load_obj(filepath):
+    """return object"""
+
+# It appears that "bpy.ops.import_scene.obj" uses the legacy importer
+    x = bpy.ops.wm.obj_import(filepath=filepath,
+                              forward_axis='Y',
+                              up_axis='Z')
+
+    try:
+        return bpy.context.selected_objects[-1]
+    except IndexError:
+        return None
 
 class QuadWildPropGroup(bpy.types.PropertyGroup):
     scale:          bpy.props.FloatProperty(name='scale',               default=1, min=0, soft_min=0.001)
@@ -32,6 +53,7 @@ class QuadWildPropGroup(bpy.types.PropertyGroup):
     alpha:          bpy.props.FloatProperty(name="alpha",               default=0.01, min=0., max=1.)
     align:          bpy.props.BoolProperty (name='Enable alignment',    default=False)
     align_weight:   bpy.props.FloatProperty(name='Alignment weight',    default=0.1, min=0., max=10.)
+    smoothing:      bpy.props.BoolProperty (name='Smoothing?',          default=True)
     create_new_obj: bpy.props.BoolProperty (name='Create new object',   default=True)
 
 class QuadWildOperator(bpy.types.Operator):
@@ -39,6 +61,7 @@ class QuadWildOperator(bpy.types.Operator):
     bl_idname = "quadwild_bimdf.op"                # Unique identifier for buttons and menu items to reference.
     bl_label = "Retopologize"                      # Display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
+    
 
     @classmethod
     def poll(self, context):
@@ -52,7 +75,28 @@ class QuadWildOperator(bpy.types.Operator):
         pg = obj.quadwild_propgrp
         print(pg.alpha)
         print("QW run")
-        self.proc = subprocess.Popen(["/bin/sleep", "3"])
+        try:
+            os.mkdir(TEMPDIR)
+        except FileExistsError:
+            pass
+        filename = "tmp" # we probably want to increase some counter here...
+        filepath= os.path.join(TEMPDIR, "mesh.obj")
+        print("QuadWild-BiMDF: saving mesh to be quadrangulated as ", filepath)
+        bpy.ops.wm.obj_export(filepath=filepath,
+                              check_existing=False,
+                              apply_modifiers=True,
+                              export_eval_mode='DAG_EVAL_RENDER',
+                              export_selected_objects=True,
+                              export_uv=False,
+                              export_normals=False,
+                              export_materials=False,
+                              export_triangulated_mesh=True,
+                             )
+        self.proc = subprocess.Popen([os.path.join(BINDIR, "quadwild"),
+                                      filepath,
+                                      "3",
+                                      os.path.join(CONFDIR, "prep_config", "basic_setup.txt")
+                                      ])
         self.timer = wm.event_timer_add(0.5, window=context.window)
         self.timer = wm.modal_handler_add(self)
         self.progress = ProgressInfo(context.area)
@@ -61,7 +105,18 @@ class QuadWildOperator(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def finished(self):
+        print("QW finished")
         self.progress.update(None)
+
+        #filepath=os.path.join(TEMPDIR, "mesh_rem_p0_0_quadrangulation_smooth.obj")
+        filepath=os.path.join(TEMPDIR, "mesh_rem_quadrangulation_smooth.obj")
+        obj=load_obj(filepath)
+        if obj:
+            obj.name="retopoo"
+        else:
+            self.report({'ERROR'}, "QuadWild-BiMDF failure, cannot open output file")
+
+
         pass
 
     def abort(self):
@@ -74,7 +129,7 @@ class QuadWildOperator(bpy.types.Operator):
 
     def modal(self, context, event):
         wm = context.window_manager
-        print("QW modal ev", event.type, repr(event))
+        #print("QW modal ev", event.type, repr(event))
         if event.type == 'ESC':
             self.report({'INFO'}, "QuadWild-BiMDF retopo canceled")
             self.abort()
@@ -82,12 +137,12 @@ class QuadWildOperator(bpy.types.Operator):
 
         elif event.type == 'TIMER':
             if self.proc.poll() is None: # still running
-                print("poll None")
+                #print("poll None")
                 self.progress.update("QuadWild-BiMDF working..." + str(self.prog))
                 self.prog+=1
                 return {'RUNNING_MODAL'}
             else:
-                print("poll not None")
+                #print("poll not None")
                 self.finished()
                 return {'FINISHED'}
         return {'RUNNING_MODAL'}
@@ -146,3 +201,5 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+    bpy.ops.quadwild_bimdf.op()
+
