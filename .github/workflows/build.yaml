@@ -1,0 +1,81 @@
+name: Build
+
+on: [workflow_dispatch]
+
+env:
+  # CMake build directory:
+  build: '${{ github.workspace }}/build'
+  build_type: 'Release'
+
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: install prerequisites
+        run: sudo apt-get install -y ninja-build
+
+      - name: print versions
+        run: |
+          ninja --version
+          cmake --version
+
+      - name: compile
+        run: |
+          cmake --version
+          cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.build_type}} -DSATSUMA_ENABLE_BLOSSOM5=0 -DCMAKE_EXE_LINKER_FLAGS="-static" -DBLA_STATIC=1 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+          cmake --build build
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-binaries
+          path: |
+            build/Build/bin/*
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: compile
+        run: |
+          cmake --version
+          cmake . -B ${{ env.build }} -T "ClangCl"  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+          cmake --build build --config ${{env.build_type}}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-binaries
+          path: |
+            build/Build/*
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: install prerequisites
+        run: brew install ninja
+
+      - name: compile
+        run: |
+          cmake --version
+          cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.config}}  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+          cmake --build build
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-binaries
+          path: |
+            build/Build/bin/*
