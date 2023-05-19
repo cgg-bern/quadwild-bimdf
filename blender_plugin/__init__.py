@@ -14,9 +14,19 @@ bl_info = {
 
 import bpy
 import math
+import subprocess
+
+class ProgressInfo:
+    def __init__(self, area):
+        self.area = area
+
+    def update(self, text=None):
+        # TODO: show wallclock time elapsed
+        self.area.header_text_set(text)
+    
 
 class QuadWildPropGroup(bpy.types.PropertyGroup):
-    scale:          bpy.props.FloatProperty(name='scale',               default=1)
+    scale:          bpy.props.FloatProperty(name='scale',               default=1, min=0, soft_min=0.001)
     preprocess:     bpy.props.BoolProperty (name='Auto-preprocess',     default=True)
     sharp_thresh:   bpy.props.FloatProperty(name='Sharp edge thresh',   default=35/180*math.pi, min=0., max=math.pi, unit='ROTATION')
     alpha:          bpy.props.FloatProperty(name="alpha",               default=0.01, min=0., max=1.)
@@ -30,11 +40,60 @@ class QuadWildOperator(bpy.types.Operator):
     bl_label = "Retopologize"                      # Display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
 
+    @classmethod
+    def poll(self, context):
+        # TODO: check if we can run (e.g., binary available)
+        return True
+
+
     def execute(self, context):
         obj = context.active_object
+        wm = context.window_manager
         pg = obj.quadwild_propgrp
         print(pg.alpha)
-        return {'FINISHED'}
+        print("QW run")
+        self.proc = subprocess.Popen(["/bin/sleep", "3"])
+        self.timer = wm.event_timer_add(0.5, window=context.window)
+        self.timer = wm.modal_handler_add(self)
+        self.progress = ProgressInfo(context.area)
+        self.prog = 10
+        self.progress.update("QuadWild-BiMDF working...")
+        return {'RUNNING_MODAL'}
+
+    def finished(self):
+        self.progress.update(None)
+        pass
+
+    def abort(self):
+        print("QW abort")
+        self.proc.terminate() # TODO: kill?
+        self.finished()
+
+    def cancel(self, arg):
+        print("QW cancel", arg)
+
+    def modal(self, context, event):
+        wm = context.window_manager
+        print("QW modal ev", event.type, repr(event))
+        if event.type == 'ESC':
+            self.report({'INFO'}, "QuadWild-BiMDF retopo canceled")
+            self.abort()
+            return {'CANCELLED'}
+
+        elif event.type == 'TIMER':
+            if self.proc.poll() is None: # still running
+                print("poll None")
+                self.progress.update("QuadWild-BiMDF working..." + str(self.prog))
+                self.prog+=1
+                return {'RUNNING_MODAL'}
+            else:
+                print("poll not None")
+                self.finished()
+                return {'FINISHED'}
+        return {'RUNNING_MODAL'}
+
+
+    
 
 
 class QuadWildPanel(bpy.types.Panel):
