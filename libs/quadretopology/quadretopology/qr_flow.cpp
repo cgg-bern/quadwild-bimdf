@@ -474,8 +474,8 @@ static FlowProblem make_bimdf(
         auto const& left_single = chart_side_nodes.at(left_chart_id).at(left_side_idx);
 
 
-        float left_iso_weight = isometry_weight / left_n_subsides;
-        float right_iso_weight = isometry_weight / right_n_subsides;
+        double left_iso_weight = isometry_weight / left_n_subsides;
+        double right_iso_weight = isometry_weight / right_n_subsides;
         double avg_valence = .5 * (left_n_subsides + right_n_subsides);
         double unaligned_cost = regularity_weight * parameters.alignSingularitiesWeight * .5 / avg_valence;
 
@@ -793,7 +793,7 @@ FlowResult findSubdivisionsFlow(
         };
 #endif
         //debug_costs(problem.emergency_sideloops_per_valence[5]);
-        stats.push_back({
+        stats.push_back(FlowStats{
                             .n_pair_unaligners_used = count_uses(problem.pair_unaligners),
                             .cost_iso_nonpaired = sum_costs(problem.unpaired_edges),
                             .cost_iso_paired = sum_costs(problem.paired_edges),
