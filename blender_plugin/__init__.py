@@ -37,9 +37,7 @@ def load_obj(filepath):
     """return object"""
 
 # It appears that "bpy.ops.import_scene.obj" uses the legacy importer
-    x = bpy.ops.wm.obj_import(filepath=filepath,
-                              forward_axis='Y',
-                              up_axis='Z')
+    x = bpy.ops.wm.obj_import(filepath=filepath)
 
     try:
         return bpy.context.selected_objects[-1]
@@ -201,5 +199,5 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-    bpy.ops.quadwild_bimdf.op()
+    #bpy.ops.quadwild_bimdf.op()
 
