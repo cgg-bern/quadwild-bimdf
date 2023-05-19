@@ -19,6 +19,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Build/lib")
 include(CheckIPOSupported)
 check_ipo_supported()
 
+if(WIN32)
+    add_definitions(/D_USE_MATH_DEFINES /DNOMINMAX)
+    #vcglib has some broken debug code enabled with _DEBUG
+    #add_compile_options(/U_DEBUG)
+    # XXX: hacky workaround, seems i cannot undefine _DEBUG even in a release build?!
+    add_definitions(/DHETYPE=auto)
+endif()
+
+
 find_package(Threads)
 find_package(Gurobi QUIET)
 
