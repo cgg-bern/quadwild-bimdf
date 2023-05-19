@@ -17,28 +17,53 @@ import math
 import subprocess
 import os
 
-ADDON_IDNAME = "quadwild_bimdf"
+RUNNING_WITHOUT_INSTALL = (__name__ == "__main__")
 
 TEMPDIR = os.path.join(bpy.app.tempdir, "quadwild_bimdf")
 BINDIR = "/Users/mh/tmp/quadwild-bimdf-release/macos/quadwild-bimdf-0.0.1"
 CONFDIR = "/Users/mh/github/cgg-bern/quadwild-bimdf/config"
 
 
+#def set_binary_filepath(self, value):
+#    print("set", value)
+#    print("self", self)
+#    self["quadwild_binary_filepath"] = value
 
 class AddonPrefs(bpy.types.AddonPreferences):
-    bl_idname = ADDON_IDNAME
+    bl_idname = __name__
+
 
     quadwild_binary_filepath: bpy.props.StringProperty(
         name="Path to quadwild binary",
         subtype="FILE_PATH")
+        #set=set_binary_filepath)
+    # TODO: use setter to validate / grab version
 
     def draw(self, context):
         layout = self.layout
         layout.label(text="QuadWild-BiMDF preferences")
-        layout.prop(self, "quadwild_binary_filepath")
+        if quadwild_binary_works():
+            icon = 'NONE'
+        else:
+            icon = 'ERROR'
+        layout.prop(self, "quadwild_binary_filepath", icon=icon)
 
-def get_addon_prefs(context):
-    return context.preferences.addons[ADDON_IDNAME].preferences
+def get_addon_prefs():
+    assert not RUNNING_WITHOUT_INSTALL
+    return bpy.context.preferences.addons[__name__].preferences
+
+def get_binary_filepath():
+    if RUNNING_WITHOUT_INSTALL:
+        return os.getenv("QUADWILD_BINARY_FILEPATH")
+    else:
+        return get_addon_prefs().quadwild_binary_filepath
+
+def quadwild_binary_works():
+    # TODO: get version
+    filepath = get_binary_filepath()
+    return filepath and os.path.exists(filepath)
+
+
 
 class ProgressInfo:
     def __init__(self, area):
@@ -81,7 +106,7 @@ class QuadWildOperator(bpy.types.Operator):
     @classmethod
     def poll(self, context):
         # TODO: check if we can run (e.g., binary available)
-        return True
+        return quadwild_binary_works()
 
 
     def execute(self, context):
@@ -95,9 +120,9 @@ class QuadWildOperator(bpy.types.Operator):
         except FileExistsError:
             pass
         filename = "tmp" # we probably want to increase some counter here...
-        filepath= os.path.join(TEMPDIR, "mesh.obj")
-        print("QuadWild-BiMDF: saving mesh to be quadrangulated as ", filepath)
-        bpy.ops.wm.obj_export(filepath=filepath,
+        mesh_filepath= os.path.join(TEMPDIR, "mesh.obj")
+        print("QuadWild-BiMDF: saving mesh to be quadrangulated as ", mesh_filepath)
+        bpy.ops.wm.obj_export(filepath=mesh_filepath,
                               check_existing=False,
                               apply_modifiers=True,
                               export_eval_mode='DAG_EVAL_RENDER',
@@ -108,10 +133,8 @@ class QuadWildOperator(bpy.types.Operator):
                               export_triangulated_mesh=True,
                              )
 
-        binpath = addon_prefs = get_addon_prefs(context).quadwild_binary_filepath
-        print("pref ", binpath)
-        self.proc = subprocess.Popen([os.path.join(BINDIR, "quadwild"),
-                                      filepath,
+        self.proc = subprocess.Popen([get_binary_filepath(),
+                                      mesh_filepath,
                                       "3",
                                       os.path.join(CONFDIR, "prep_config", "basic_setup.txt")
                                       ])
@@ -179,6 +202,9 @@ class QuadWildPanel(bpy.types.Panel):
     bl_category = "Retopo"
 
     def draw(self, context):
+        if not quadwild_binary_works():
+            self.layout.label(text="Quadwild binary not found at '{}'".format(get_binary_filepath()))
+            return
         ws = context.workspace
         obj = context.active_object
         if not obj:
@@ -224,7 +250,5 @@ def unregister():
 
 
 if __name__ == "__main__":
-    print(__file__)
     register()
-    #bpy.ops.quadwild_bimdf.op()
 

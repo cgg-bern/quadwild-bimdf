@@ -1,2 +1,6 @@
 Usage without installation:
-```blender --python blender_plugin/__init__.py```
+
+```
+export QUADWILD_BINARY_FILEPATH="/path/to/quadwild"
+blender --python blender_plugin/__init__.py
+```
