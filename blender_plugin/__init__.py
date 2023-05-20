@@ -17,12 +17,34 @@ import math
 import subprocess
 import os
 from pathlib import Path
+from dataclasses import dataclass
 
 RUNNING_WITHOUT_INSTALL = (__name__ == "__main__")
 
 BINDIR = "/Users/mh/tmp/quadwild-bimdf-release/macos/quadwild-bimdf-0.0.1"
 CONFDIR = "/Users/mh/github/cgg-bern/quadwild-bimdf/config"
 
+@dataclass
+class PrepConfig:
+    """Configuration for quadwild prep (remesh + field + trace)"""
+    remesh: bool = True
+    feature_angle_thresh_rad: float = 45./180 * math.pi
+
+@dataclass
+class MainConfig:
+    """Configuration for quadwild main (quantize + extract)"""
+    alpha: float = 0.01
+
+def popen_prep(mesh_filepath: Path, conf: PrepConfig):
+    # TODO: save config to tempfile
+    return  subprocess.Popen([get_binary_filepath(),
+                              mesh_filepath,
+                              "3",
+                              os.path.join(CONFDIR, "prep_config", "basic_setup.txt")
+                              ])
+
+def popen_main(conf: MainConfig):
+    pass
 
 #def set_binary_filepath(self, value):
 #    print("set", value)
