@@ -16,10 +16,10 @@ import bpy
 import math
 import subprocess
 import os
+from pathlib import Path
 
 RUNNING_WITHOUT_INSTALL = (__name__ == "__main__")
 
-TEMPDIR = os.path.join(bpy.app.tempdir, "quadwild_bimdf")
 BINDIR = "/Users/mh/tmp/quadwild-bimdf-release/macos/quadwild-bimdf-0.0.1"
 CONFDIR = "/Users/mh/github/cgg-bern/quadwild-bimdf/config"
 
@@ -77,9 +77,8 @@ class ProgressInfo:
 
 def load_obj(filepath):
     """return object"""
-
-# It appears that "bpy.ops.import_scene.obj" uses the legacy importer
-    x = bpy.ops.wm.obj_import(filepath=filepath)
+    # It appears that "bpy.ops.import_scene.obj" uses the legacy importer
+    x = bpy.ops.wm.obj_import(filepath=str(filepath))
 
     try:
         return bpy.context.selected_objects[-1]
@@ -115,6 +114,10 @@ class QuadWildExecOp(bpy.types.Operator):
         """override this"""
         pass
 
+    def get_tmpdir(self, obj):
+        p = Path(bpy.app.tempdir) / "quadwild_bimdf" / obj.name
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
     @classmethod
     def poll(self, context):
@@ -197,14 +200,9 @@ class QuadWildMainOp(QuadWildExecOp):
         pg = obj.quadwild_propgrp
         print(pg.alpha)
         print("QW run")
-        try:
-            os.mkdir(TEMPDIR)
-        except FileExistsError:
-            pass
-        filename = "tmp" # we probably want to increase some counter here...
-        mesh_filepath= os.path.join(TEMPDIR, "mesh.obj")
+        mesh_filepath = self.get_tmpdir(obj) / "mesh.obj"
         print("QuadWild-BiMDF: saving mesh to be quadrangulated as ", mesh_filepath)
-        bpy.ops.wm.obj_export(filepath=mesh_filepath,
+        bpy.ops.wm.obj_export(filepath=str(mesh_filepath),
                               check_existing=False,
                               apply_modifiers=True,
                               export_eval_mode='DAG_EVAL_RENDER',
@@ -229,8 +227,10 @@ class QuadWildMainOp(QuadWildExecOp):
 
 
     def on_finished(self, context):
+        obj = context.active_object
+        tmpdir = self.get_tmpdir(obj)
+        filepath = self.get_tmpdir(context.active_object) / "mesh_rem_quadrangulation_smooth.obj"
         #filepath=os.path.join(TEMPDIR, "mesh_rem_p0_0_quadrangulation_smooth.obj")
-        filepath=os.path.join(TEMPDIR, "mesh_rem_quadrangulation_smooth.obj")
         obj=load_obj(filepath)
         if obj:
             obj.name="retopo result"
