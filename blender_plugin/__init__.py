@@ -201,6 +201,13 @@ class QuadWildPanel(bpy.types.Panel):
     bl_region_type = 'UI' # https://docs.blender.org/api/current/bpy_types_enum_items/region_type_items.html#rna-enum-region-type-items
     bl_category = "Retopo"
 
+    @classmethod
+    def poll(self, context):
+        obj = context.active_object
+        # TODO: check if we can run (e.g., binary available)
+        return obj.type == 'MESH'
+
+
     def draw(self, context):
         if not quadwild_binary_works():
             self.layout.label(text="Quadwild binary not found at '{}'".format(get_binary_filepath()))
