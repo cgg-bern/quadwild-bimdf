@@ -96,17 +96,99 @@ class QuadWildPropGroup(bpy.types.PropertyGroup):
     smoothing:      bpy.props.BoolProperty (name='Smoothing?',          default=True)
     create_new_obj: bpy.props.BoolProperty (name='Create new object',   default=True)
 
-class QuadWildOperator(bpy.types.Operator):
-    """QuadWild Retopology (Bi-MDF version)"""     # Use this as a tooltip for menu items and buttons.
-    bl_idname = "quadwild_bimdf.op"                # Unique identifier for buttons and menu items to reference.
-    bl_label = "Retopologize"                      # Display name in the interface.
-    bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
+
+
+class QuadWildExecOp(bpy.types.Operator):
+    def on_finished(self, context):
+        """override this"""
+        pass
+
+    def on_abort(self, context):
+        """override this"""
+        pass
+
+    def on_failure(self, context):
+        """override this"""
+        pass
+
+    def on_success(self, context):
+        """override this"""
+        pass
 
 
     @classmethod
     def poll(self, context):
-        # TODO: check if we can run (e.g., binary available)
         return quadwild_binary_works()
+
+    def _finished(self, context):
+        print("QW finished")
+        self._disable_timer(context)
+        self.progress.update(None)
+        self.on_finished(context)
+
+    def _abort(self, context):
+        print("QW abort")
+        self.proc.terminate() # TODO: kill?
+        self.on_abort(context)
+
+    def _success(self, context):
+        print("QW success")
+        self.on_success(context)
+
+    def _failure(self, context):
+        print("QW failure")
+        self.on_failure(context)
+
+
+    def _enable_timer(self, context):
+        wm = context.window_manager
+        self.timer = wm.event_timer_add(0.5, window=context.window)
+
+    def _disable_timer(self, context):
+        wm = context.window_manager
+        self.timer = wm.event_timer_remove(self.timer)
+        self.timer = None
+
+    def modal(self, context, event):
+        wm = context.window_manager
+        #print("QW modal ev", event.type, repr(event))
+        if event.type == 'ESC':
+            self.report({'INFO'}, "QuadWild-BiMDF retopo canceled")
+            self._abort(context)
+            self._finished(context)
+            return {'CANCELLED'}
+
+        elif event.type == 'TIMER':
+            ret = self.proc.poll()
+
+            if ret is None: # still running
+                #print("poll None")
+                self.progress.update("QuadWild-BiMDF working..." + str(self.prog))
+                self.prog+=1
+                return {'RUNNING_MODAL'}
+            elif ret == 0:
+                self._success(context)
+                self._finished(context)
+                return {'FINISHED'}
+            else:
+                self._failure(context)
+                self._finished(context)
+                return {'CANCELLED'}
+        return {'RUNNING_MODAL'}
+
+class QuadWildPrepOp(QuadWildExecOp):
+    """QuadWild-BiMDF Retopology: Prep"""          # Use this as a tooltip for menu items and buttons.
+    bl_idname = "quadwild_bimdf.prep_op"           # Unique identifier for buttons and menu items to reference.
+    bl_label = "Retopologize prep"                 # Display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
+
+
+
+class QuadWildMainOp(QuadWildExecOp):
+    """QuadWild Retopology (Bi-MDF version)"""     # Use this as a tooltip for menu items and buttons.
+    bl_idname = "quadwild_bimdf.main_op"           # Unique identifier for buttons and menu items to reference.
+    bl_label = "Retopologize main"                 # Display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}              # Enable undo for the operator.
 
 
     def execute(self, context):
@@ -138,58 +220,23 @@ class QuadWildOperator(bpy.types.Operator):
                                       "3",
                                       os.path.join(CONFDIR, "prep_config", "basic_setup.txt")
                                       ])
-        self.timer = wm.event_timer_add(0.5, window=context.window)
-        self.timer = wm.modal_handler_add(self)
+        self._enable_timer(context)
         self.progress = ProgressInfo(context.area)
         self.prog = 10
         self.progress.update("QuadWild-BiMDF working...")
+        wm.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
-    def finished(self):
-        print("QW finished")
-        self.progress.update(None)
 
+    def on_finished(self, context):
         #filepath=os.path.join(TEMPDIR, "mesh_rem_p0_0_quadrangulation_smooth.obj")
         filepath=os.path.join(TEMPDIR, "mesh_rem_quadrangulation_smooth.obj")
         obj=load_obj(filepath)
         if obj:
-            obj.name="retopoo"
+            obj.name="retopo result"
         else:
             self.report({'ERROR'}, "QuadWild-BiMDF failure, cannot open output file")
 
-
-        pass
-
-    def abort(self):
-        print("QW abort")
-        self.proc.terminate() # TODO: kill?
-        self.finished()
-
-    def cancel(self, arg):
-        print("QW cancel", arg)
-
-    def modal(self, context, event):
-        wm = context.window_manager
-        #print("QW modal ev", event.type, repr(event))
-        if event.type == 'ESC':
-            self.report({'INFO'}, "QuadWild-BiMDF retopo canceled")
-            self.abort()
-            return {'CANCELLED'}
-
-        elif event.type == 'TIMER':
-            if self.proc.poll() is None: # still running
-                #print("poll None")
-                self.progress.update("QuadWild-BiMDF working..." + str(self.prog))
-                self.prog+=1
-                return {'RUNNING_MODAL'}
-            else:
-                #print("poll not None")
-                self.finished()
-                return {'FINISHED'}
-        return {'RUNNING_MODAL'}
-
-
-    
 
 
 class QuadWildPanel(bpy.types.Panel):
@@ -204,7 +251,6 @@ class QuadWildPanel(bpy.types.Panel):
     @classmethod
     def poll(self, context):
         obj = context.active_object
-        # TODO: check if we can run (e.g., binary available)
         return obj.type == 'MESH'
 
 
@@ -231,14 +277,15 @@ class QuadWildPanel(bpy.types.Panel):
         r.prop(pg, "align_weight")
         r.enabled = pg.align
         col.row().prop(pg, "create_new_obj")
-        col.row().operator(QuadWildOperator.bl_idname)
+        col.row().operator(QuadWildMainOp.bl_idname)
 
 #def menu_func(self, context):
 #    self.layout.operator(QuadWildRetopology.bl_idname)
 
 CLASSES = [
         QuadWildPropGroup,
-        QuadWildOperator,
+        QuadWildPrepOp,
+        QuadWildMainOp,
         QuadWildPanel,
         AddonPrefs,
         ]
