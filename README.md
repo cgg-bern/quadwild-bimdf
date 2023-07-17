@@ -51,7 +51,7 @@ We included sample config files in `config/`. To improve output quality, adjust 
 The Dockerfile will most likely also work using Docker, but we didn't test this.
 
 ### MacOS specific note
-You can install podman using [Homebrew](https://brew.sh/) with `brew install cmake`.
+You can install podman using [Homebrew](https://brew.sh/) with `brew install podman`.
 
 On MacOS, all podman containers live in a Linux VM. If you don't have one yet, create one using
 ```
@@ -61,7 +61,7 @@ podman machine init
 For a successful build, more memory than the default is requried, and more CPU cores speed it up:
 
 ```
-podman machine stop
+podman machine stop # only required if running
 podman machine set --memory 8192 podman-machine-default
 podman machine set --cpus 4 podman-machine-default
 podman machine start
