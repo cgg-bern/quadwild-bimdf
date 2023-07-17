@@ -15,8 +15,15 @@ The main code for Bi-MDF modeling can be found in [libs/quadretopology/quadretop
 - Extended config file format
 - Build without Gurobi -- controlled by CMake variable `QUADRETOPOLOGY_WITH_GUROBI`
 
+## Pre-built binaries
+
+We provide pre-built binaries in the [Releases section](https://github.com/cgg-bern/quadwild-bimdf/releases) for Linux, Windows and MacOS (arm64+x86_64).
 
 ## Building (classic)
+
+You will need a relatively recent C++ compiler and CMake.
+On MacOS, you can get them from [Homebrew](https://brew.sh/) using `brew install git cmake`.
+This will also automatically install the required *XCode Command Line Tools*.
 
 ```
 git clone --recursive https://github.com/cgg-bern/quadwild-bimdf/
@@ -39,11 +46,20 @@ the output from the main quadwild binary.
 We included sample config files in `config/`. To improve output quality, adjust them to your needs :)
 
 
-## Container-based usage with podman
+## Container-based building and usage with podman
 
 The Dockerfile will most likely also work using Docker, but we didn't test this.
 
-On MacOS, all podman containers live in a Linux VM; for a successful build, more memory is requried, and more cpus speed it up:
+### MacOS specific note
+You can install podman using [Homebrew](https://brew.sh/) with `brew install cmake`.
+
+On MacOS, all podman containers live in a Linux VM. If you don't have one yet, create one using
+```
+podman machine init
+```
+
+For a successful build, more memory than the default is requried, and more CPU cores speed it up:
+
 ```
 podman machine stop
 podman machine set --memory 8192 podman-machine-default
@@ -51,11 +67,14 @@ podman machine set --cpus 4 podman-machine-default
 podman machine start
 ```
 
+### Building
+
 Create the container:
 ```
 podman build . --build-arg WITH_GUROBI=0 -t quadwild-bimdf
 ```
 
+### Running
 Run the binaries; you need to mount some volume into the container to access your data, for example mapping `/Users`:
 ```
 podman run --rm  --volume /Users:/Users quadwild-bimdf quadwild arguments-as-described-above
