@@ -19,6 +19,8 @@ The main code for Bi-MDF modeling can be found in [libs/quadretopology/quadretop
 ## Building (classic)
 
 ```
+git clone --recursive https://github.com/cgg-bern/quadwild-bimdf/
+cd quadwild-bimdf
 cmake . -B build -DSATSUMA_ENABLE_BLOSSOM5=0
 cmake --build build
 ```
