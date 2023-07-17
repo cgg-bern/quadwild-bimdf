@@ -273,7 +273,7 @@ class QuadWildPanel(bpy.types.Panel):
     @classmethod
     def poll(self, context):
         obj = context.active_object
-        return obj.type == 'MESH'
+        return obj and obj.type == 'MESH'
 
 
     def draw(self, context):
