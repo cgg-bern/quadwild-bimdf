@@ -26,6 +26,7 @@ if(WIN32)
     #add_compile_options(/U_DEBUG)
     # XXX: hacky workaround, seems i cannot undefine _DEBUG even in a release build?!
     add_definitions(/DHETYPE=auto)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 endif()
 
 
