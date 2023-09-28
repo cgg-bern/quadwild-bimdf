@@ -28,14 +28,23 @@ jobs:
         run: |
           cmake --version
           cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.build_type}} -DSATSUMA_ENABLE_BLOSSOM5=0 -DCMAKE_EXE_LINKER_FLAGS="-static" -DBLA_STATIC=1 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
-          cmake --build build
+          cmake --build ${{env.build}}
+
+      - name: collect release
+        run: |
+          cmake -E make_directory release
+          cmake -E copy ${{env.build}}/Build/bin/quadwild release
+          cmake -E copy ${{env.build}}/Build/bin/quad_from_patches release
+          cmake -E copy_directory config release/config
+          cmake -E copy README_release.md release
 
       - name: Upload results
         uses: actions/upload-artifact@v3
         with:
           name: linux-binaries
           path: |
-            build/Build/bin/*
+            release/*
+
 
   build-windows:
     runs-on: windows-latest
@@ -50,12 +59,19 @@ jobs:
           cmake . -B ${{ env.build }} -T "ClangCl"  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
           cmake --build build --config ${{env.build_type}}
 
+      - name: collect release
+        run: |
+          cmake -E make_directory release
+          cmake -E copy_directory build\Build\bin\${{env.build_type}} release
+          cmake -E copy_directory config release\config
+          cmake -E copy README_release.md release
+
       - name: Upload results
         uses: actions/upload-artifact@v3
         with:
           name: windows-binaries
           path: |
-            build/Build/*
+            release/*
 
   build-macos:
     runs-on: macos-latest
@@ -71,11 +87,20 @@ jobs:
         run: |
           cmake --version
           cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.config}}  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
-          cmake --build build
+          cmake --build ${{env.build}}
+
+      - name: collect release
+        run: |
+          cmake -E make_directory release
+          cmake -E copy ${{env.build}}/Build/bin/quadwild release
+          cmake -E copy ${{env.build}}/Build/bin/quad_from_patches release
+          cmake -E copy_directory config release/config
+          cmake -E copy README_release.md release
 
       - name: Upload results
         uses: actions/upload-artifact@v3
         with:
           name: macos-binaries
           path: |
-            build/Build/bin/*
+            release/*
+
