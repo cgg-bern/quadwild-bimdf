@@ -6,6 +6,7 @@
 
 #include "mesh_types.h"
 #include <fstream>
+#include <string>
 #include <wrap/io_trimesh/import.h>
 #include <wrap/io_trimesh/export.h>
 
@@ -22,7 +23,7 @@ bool can_open_file(std::string const&filename) {
     return good;
 }
 
-int main(int argc, char *argv[])
+int actual_main(int argc, char *argv[])
 {
     //MESH LOAD
     if (argc != 2) {
@@ -143,5 +144,15 @@ int main(int argc, char *argv[])
     vcg::tri::io::ExporterPLY<TriangleMesh>::Save(patch_mesh,ColorPatchMesh.c_str(),
                                                   vcg::tri::io::Mask::IOM_FACECOLOR);
 
-
+    return 0;
+}
+int main(int argc, char* argv[])
+{
+    try {
+        return actual_main(argc, argv);
+    }
+    catch (std::runtime_error& e) {
+        std::cerr << "fatal error: " << e.what() << std::endl;
+        return 1;
+    }
 }

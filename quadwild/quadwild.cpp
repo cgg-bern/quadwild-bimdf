@@ -33,7 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #  include <errhandlingapi.h>
 #endif
 
-int main(int argc, char *argv[])
+int actual_main(int argc, char* argv[])
 {
 #ifdef _WIN32
     // This make crashes very visible - without them, starting the
@@ -167,3 +167,14 @@ int main(int argc, char *argv[])
     quadrangulate(meshFilenamePrefix + ".obj", trimeshToQuadrangulate, quadmesh, trimeshPartitions, trimeshCorners, trimeshFeatures, trimeshFeaturesC, quadmeshPartitions, quadmeshCorners, ilpResult, parameters);
 }
 
+
+int main(int argc, char* argv[])
+{
+    try {
+        return actual_main(argc, argv);
+    }
+    catch (std::runtime_error& e) {
+        std::cerr << "fatal error: " << e.what() << std::endl;
+        return 1;
+    }
+}

@@ -68,7 +68,7 @@ void loadSetupFile(const std::string& path, QuadRetopology::Parameters& paramete
 void SaveSetupFile(const std::string& path, QuadRetopology::Parameters& parameters, float& scaleFactor, int& fixedChartClusters);
 //int FindCurrentNum(std::string &pathProject);
 
-int main(int argc, char *argv[])
+int actual_main(int argc, char *argv[])
 {
 #ifdef _WIN32
     // This make crashes very visible - without them, starting the
@@ -595,3 +595,13 @@ void SaveSetupFile(const std::string& path, QuadRetopology::Parameters& paramete
 //    }
 //    return CurrNum;
 //}
+int main(int argc, char* argv[])
+{
+    try {
+        return actual_main(argc, argv);
+    }
+    catch (std::runtime_error& e) {
+        std::cerr << "fatal error: " << e.what() << std::endl;
+        return 1;
+    }
+}
