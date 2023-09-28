@@ -792,6 +792,7 @@ FlowResult findSubdivisionsFlow(
             }
         };
 #endif
+#ifndef _MSC_VER // XXX TODO: this is a weird MSVC compile error, just ignore stats
         //debug_costs(problem.emergency_sideloops_per_valence[5]);
         stats.push_back(FlowStats{
                             .n_pair_unaligners_used = count_uses(problem.pair_unaligners),
@@ -812,6 +813,7 @@ FlowResult findSubdivisionsFlow(
                             .cost_alignment = sum_costs(problem.pair_unaligners),
                         });
 
+
         FlowStats &stat = stats.back();
 
         std::cout << "\nsolved. FlowStats:"
@@ -819,7 +821,6 @@ FlowResult findSubdivisionsFlow(
                   << nlohmann::json(stat)
                   << "\n\tsummed: " << stat.cost_sum() // TODO: assert to eps-equality with total cost
                   << "\n" << std::endl;
-
         double err = std::fabs(stat.cost_sum() - bimdf_cost);
         if (std::fabs(err) > 1e-3) {
             std::cerr << "ERROR: BiMDF cost ("
@@ -828,6 +829,7 @@ FlowResult findSubdivisionsFlow(
                       << stat.cost_sum()
                       << ")." << std::endl;
         }
+#endif
 
         if (is_valid_quantisation(chart_data, out_results)) {
             //std::cout << "\tvalidation of hard constraints successful." << std::endl;
