@@ -751,7 +751,7 @@ FlowResult findSubdivisionsFlow(
 
         assert(out_results.size() == chart_data.subsides.size());
         for (size_t i = 0; i < out_results.size(); ++i) {
-            auto edges = problem.subside_edges[i];
+            const auto &edges = problem.subside_edges[i];
 
             assert (edges[0] != lemon::INVALID);
             auto val = sol[edges[0]];
@@ -766,7 +766,7 @@ FlowResult findSubdivisionsFlow(
         }
         auto count_uses = [&](const auto &edge_vec) -> size_t {
             size_t n = 0;
-            for(auto e: edge_vec) {
+            for(const auto &e: edge_vec) {
                 if (sol[e] != 0) {
                     ++n;
                 }
@@ -775,7 +775,7 @@ FlowResult findSubdivisionsFlow(
         };
         auto sum_costs = [&](const auto &edge_vec) -> double {
             double sum = 0;
-            for(auto e: edge_vec) {
+            for(const auto &e: edge_vec) {
                 sum += problem.bimdf->cost(e, sol[e]);
             }
             return sum;
