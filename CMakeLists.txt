@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.9)
 cmake_policy(SET CMP0069 NEW) # honor INTERPROCEDURAL_OPTIMIZATION
 
 project (Quadwild
-    VERSION 0.0.1
+    VERSION 0.0.2
     LANGUAGES C CXX # OpenMesh cmake does not work without C enabled
     )
 
