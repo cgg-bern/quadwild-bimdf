@@ -19,6 +19,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Build/lib")
 include(CheckIPOSupported)
 check_ipo_supported()
 
+set(BUILD_SHARED_LIBS OFF) # static libs make distribution easier
 if(WIN32)
     add_definitions(/D_USE_MATH_DEFINES /DNOMINMAX)
     #vcglib has some broken debug code enabled with _DEBUG
@@ -69,7 +70,6 @@ else()
 endif()
 add_subdirectory("libs/lpsolve")
 
-set(BUILD_SHARED_LIBS OFF) # static libs make distribution easier
 
 set( WANT_COMISO_QT OFF CACHE BOOL "Enable Qt support in CoMISo")
 set( DISABLE_MPI ON)
