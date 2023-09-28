@@ -43,3 +43,4 @@ CMakeLists.txt.user
 .cache
 /build*
 .DS_Store
+/.vs
