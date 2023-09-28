@@ -1,7 +1,7 @@
 {
     "double_cover": {
         "max_deviation": 5,
-        "matching_solver": "BlossomV",
+        "matching_solver": "Lemon",
         "evening_mode": "MST",
         "method": "HalfAsymmetric",
         "verbosity": 1
