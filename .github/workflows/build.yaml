@@ -86,7 +86,7 @@ jobs:
       - name: compile
         run: |
           cmake --version
-          cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.config}}  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          cmake . -GNinja -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{env.build_type}}  -DSATSUMA_ENABLE_BLOSSOM5=0 -D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
           cmake --build ${{env.build}}
 
       - name: collect release
