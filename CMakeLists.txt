@@ -29,6 +29,9 @@ if(WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 endif()
 
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 
 find_package(Threads)
 find_package(Gurobi QUIET)
@@ -39,7 +42,6 @@ target_include_directories(Eigen3::Eigen INTERFACE "libs/eigen")
 find_package(GMM QUIET)
 
 if (NOT TARGET GMM::GMM)
-    include(FetchContent)
     FetchContent_Declare(gmm
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         URL http://download-mirror.savannah.gnu.org/releases/getfem/stable/gmm-5.4.2.tar.gz
