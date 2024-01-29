@@ -457,11 +457,11 @@ static FlowProblem make_bimdf(
         double left_target = subside.length / chart_edge_length[left_chart_id];
         double right_target = left_target;
         const auto &left_chart = chart_data.charts[left_chart_id];
-        const auto &right_chart = chart_data.charts[right_chart_id];
 
         int left_n_subsides = left_chart.chartSubsides.size();
         int right_n_subsides = left_n_subsides;
         if (right_chart_id != -1) {
+            const auto &right_chart = chart_data.charts[right_chart_id];
             right_n_subsides = right_chart.chartSubsides.size();
             right_target = subside.length / chart_edge_length[right_chart_id];
         }
@@ -493,6 +493,7 @@ static FlowProblem make_bimdf(
                 problem.unpaired_edges.push_back(edges[0]);
             }
         } else {
+            const auto &right_chart = chart_data.charts[right_chart_id];
             // no boundary involved!
             bool right_paired = spi.paired_sides[right_chart_id][right_side_idx];
             // these may be invalid depening on paired/non-paired:
@@ -502,10 +503,10 @@ static FlowProblem make_bimdf(
 
             if (left_paired && right_paired) {
 #if 1  // check for oriented surface
-            const auto &left_side = left_chart.chartSides[left_side_idx];
-            const auto &right_side = right_chart.chartSides[right_side_idx];
-            assert(left_side.vertices.front() == right_side.vertices.back());
-            assert(left_side.vertices.back() == right_side.vertices.front());
+                const auto &left_side = left_chart.chartSides[left_side_idx];
+                const auto &right_side = right_chart.chartSides[right_side_idx];
+                assert(left_side.vertices.front() == right_side.vertices.back());
+                assert(left_side.vertices.back() == right_side.vertices.front());
 #endif
                 assert(left_side.subsides.size() == 1);
                 assert(right_side.subsides.size() == 1);
