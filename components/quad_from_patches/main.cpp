@@ -326,6 +326,7 @@ int actual_main(int argc, char *argv[])
       std::ofstream json_file{json_filename};
       json_file << std::setw(4) << json;
     }
+    return 0;
 }
 
 

@@ -165,6 +165,7 @@ int actual_main(int argc, char* argv[])
 
     std::cout<<std::endl<<"--------------------- 3 - Quadrangulation ---------------------"<<std::endl;
     quadrangulate(meshFilenamePrefix + ".obj", trimeshToQuadrangulate, quadmesh, trimeshPartitions, trimeshCorners, trimeshFeatures, trimeshFeaturesC, quadmeshPartitions, quadmeshCorners, ilpResult, parameters);
+    return 0;
 }
 
 
