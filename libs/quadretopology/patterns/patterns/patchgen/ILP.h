@@ -1,6 +1,7 @@
 #pragma once
 #include <lp_lib.h>
 #include <Eigen/Core>
+#include <cassert>
 
 struct ILP {
     int num_variables;
