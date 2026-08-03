@@ -74,13 +74,8 @@ endif()
 add_subdirectory("libs/lpsolve")
 
 
-set( WANT_COMISO_QT OFF CACHE BOOL "Enable Qt support in CoMISo")
-set( DISABLE_MPI ON)
-set(COMISO_ENABLE_METIS   OFF CACHE BOOL "Build with METIS (if found)" )
-set(COMISO_ENABLE_MUMPS   OFF CACHE BOOL "Build with MUMPS (if found)" )
-set(COMISO_ENABLE_LPSOLVE OFF CACHE BOOL "Build with lpsolve (if found)" )
-set(COMISO_ENABLE_GUROBI  OFF CACHE BOOL "Build with Gurobi (if found)" )
-set( COMISO_BUILD_WITHOUT_BOOST ON)
+set(COMISO_ENABLE_DEFAULT   OFF CACHE BOOL "" FORCE)
+set(COMISO_ENABLE_GMM   ON CACHE BOOL "" FORCE)
 add_subdirectory("libs/CoMISo")
 #add_subdirectory("libs/AntTweakBar") # vcglib wrapper is not compiled with vcglib's cmake :(
 
